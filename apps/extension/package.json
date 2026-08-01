@@ -1,0 +1,11 @@
+{
+  "name": "@reflow/extension",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "dev": "tsc --noEmit --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/dist/**',
       '**/node_modules/**',
+      'packages/contracts/src/database.types.ts',
     ],
   },
   eslint.configs.recommended,

@@ -19,16 +19,21 @@ The Chrome extension is the observation boundary. Beginning in Phase 3, its
 content script will sanitize DOM data before extension IPC. The extension uses
 only a Supabase publishable key and never receives trusted server credentials.
 
-Hosted Supabase provides Auth, Postgres, Realtime, Storage, and pgvector. Schema
-changes are committed as migrations and pushed to a linked hosted development
-project. Reflow does not run a local Supabase stack.
+Hosted Supabase provides Auth, Postgres, and Realtime. Schema changes are
+committed as migrations and pushed to a linked hosted development project.
+Reflow does not run a local Supabase stack.
 
 The Next.js application runs on localhost and provides context setup, process
 analysis, and human approval. Its trusted operations remain server-side.
 
 The Node worker runs locally, claims durable jobs from Supabase, and performs
-document extraction, aggregation, embedding, and redesign. Model calls pass
-through the shared AI Gateway package.
+trace normalization, task inference, process mining, and redesign. Model calls
+pass through the shared AI Gateway package.
+
+Reflow begins without document ingestion or vector search. Task inference is
+grounded in sanitized browser traces; embeddings will be introduced only if
+later clustering benchmarks demonstrate a need. Any future embedding setting
+must use the exact name `REFLOW_EMBEDDING_MODEL`.
 
 ## Product boundary
 

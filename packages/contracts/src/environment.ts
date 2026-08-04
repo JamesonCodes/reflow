@@ -8,10 +8,7 @@ export const browserEnvironmentSchema = z.object({
 export const trustedEnvironmentSchema = browserEnvironmentSchema.extend({
   AI_GATEWAY_API_KEY: z.string().min(1),
   REFLOW_ADMIN_EMAILS: z.string().min(1),
-  REFLOW_EMBEDDING_DIMENSIONS: z.coerce.number().int().positive(),
-  REFLOW_EMBEDDING_MODEL: z.string().min(1),
-  REFLOW_EMBEDDING_VERSION: z.coerce.number().int().positive(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  SUPABASE_SECRET_KEY: z.string().min(1),
 });
 
 export type BrowserEnvironment = z.infer<typeof browserEnvironmentSchema>;

@@ -22,13 +22,9 @@ describe('environment schemas', () => {
       ...browserEnvironment,
       AI_GATEWAY_API_KEY: 'gateway-key',
       REFLOW_ADMIN_EMAILS: 'analyst@example.com',
-      REFLOW_EMBEDDING_DIMENSIONS: '1024',
-      REFLOW_EMBEDDING_MODEL: 'mistral/mistral-embed',
-      REFLOW_EMBEDDING_VERSION: '1',
-      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      SUPABASE_SECRET_KEY: 'secret-key',
     });
 
-    expect(result.REFLOW_EMBEDDING_DIMENSIONS).toBe(1024);
-    expect(result.REFLOW_EMBEDDING_VERSION).toBe(1);
+    expect(result.SUPABASE_SECRET_KEY).toBe('secret-key');
   });
 });

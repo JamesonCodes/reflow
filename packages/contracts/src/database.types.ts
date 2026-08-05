@@ -247,6 +247,110 @@ export type Database = {
           },
         ];
       };
+      observer_profiles: {
+        Row: {
+          created_at: string;
+          custom_role: string | null;
+          default_department_id: string;
+          default_job_role_id: string | null;
+          observer_id: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          custom_role?: string | null;
+          default_department_id: string;
+          default_job_role_id?: string | null;
+          observer_id: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          custom_role?: string | null;
+          default_department_id?: string;
+          default_job_role_id?: string | null;
+          observer_id?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'observer_profiles_department_fkey';
+            columns: ['workspace_id', 'default_department_id'];
+            isOneToOne: false;
+            referencedRelation: 'departments';
+            referencedColumns: ['workspace_id', 'id'];
+          },
+          {
+            foreignKeyName: 'observer_profiles_job_role_fkey';
+            columns: [
+              'workspace_id',
+              'default_department_id',
+              'default_job_role_id',
+            ];
+            isOneToOne: false;
+            referencedRelation: 'job_roles';
+            referencedColumns: ['workspace_id', 'department_id', 'id'];
+          },
+          {
+            foreignKeyName: 'observer_profiles_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      privacy_exclusions: {
+        Row: {
+          allowed_domain_id: string;
+          created_at: string;
+          id: string;
+          is_enabled: boolean;
+          path_prefix: string;
+          reason: string | null;
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          allowed_domain_id: string;
+          created_at?: string;
+          id?: string;
+          is_enabled?: boolean;
+          path_prefix: string;
+          reason?: string | null;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          allowed_domain_id?: string;
+          created_at?: string;
+          id?: string;
+          is_enabled?: boolean;
+          path_prefix?: string;
+          reason?: string | null;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'privacy_exclusions_domain_fkey';
+            columns: ['workspace_id', 'allowed_domain_id'];
+            isOneToOne: false;
+            referencedRelation: 'allowed_domains';
+            referencedColumns: ['workspace_id', 'id'];
+          },
+          {
+            foreignKeyName: 'privacy_exclusions_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       processing_jobs: {
         Row: {
           attempt_count: number;
@@ -538,6 +642,17 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      create_workspace_invite: {
+        Args: {
+          invite_expires_at?: string;
+          invite_max_uses?: number;
+          target_workspace_id: string;
+        };
+        Returns: {
+          invite_code: string;
+          invite_id: string;
+        }[];
       };
       join_workspace_by_invite: {
         Args: { installation_id: string; invite_code: string };

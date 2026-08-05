@@ -1,6 +1,8 @@
 export {
+  adminEnvironmentSchema,
   browserEnvironmentSchema,
   trustedEnvironmentSchema,
+  type AdminEnvironment,
   type BrowserEnvironment,
   type TrustedEnvironment,
 } from './environment';
@@ -13,6 +15,16 @@ export {
   type ObservationWindow,
   type SanitizedCapturedEvent,
 } from './observation';
+export {
+  approvedHostnameSchema,
+  departmentNameSchema,
+  inviteCodeSchema,
+  observerDefaultsSchema,
+  privacyPathPrefixSchema,
+  roleNameSchema,
+  workspaceNameSchema,
+  type ObserverDefaultsInput,
+} from './study';
 export {
   Constants as databaseConstants,
   type CompositeTypes,

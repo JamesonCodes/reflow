@@ -5,11 +5,15 @@ export const browserEnvironmentSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url().startsWith('https://'),
 });
 
-export const trustedEnvironmentSchema = browserEnvironmentSchema.extend({
-  AI_GATEWAY_API_KEY: z.string().min(1),
+export const adminEnvironmentSchema = browserEnvironmentSchema.extend({
   REFLOW_ADMIN_EMAILS: z.string().min(1),
   SUPABASE_SECRET_KEY: z.string().min(1),
 });
 
+export const trustedEnvironmentSchema = adminEnvironmentSchema.extend({
+  AI_GATEWAY_API_KEY: z.string().min(1),
+});
+
+export type AdminEnvironment = z.infer<typeof adminEnvironmentSchema>;
 export type BrowserEnvironment = z.infer<typeof browserEnvironmentSchema>;
 export type TrustedEnvironment = z.infer<typeof trustedEnvironmentSchema>;

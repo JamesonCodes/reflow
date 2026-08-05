@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import './styles.css';
 
 export const metadata: Metadata = {
-  description: 'Local-first process discovery and redesign.',
-  title: 'Reflow',
+  description: 'Browser-only process discovery grounded in observed work.',
+  title: 'Reflow — Process discovery',
 };
 
 export default function RootLayout({

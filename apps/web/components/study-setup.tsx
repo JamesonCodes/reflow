@@ -152,11 +152,11 @@ function Welcome({ supabase }: { supabase: Supabase }) {
       <main className="welcome-layout">
         <section className="welcome-copy">
           <p className="eyebrow">Browser process discovery</p>
-          <h1>See how work actually moves.</h1>
+          <h1>Let agents learn your work. Then automate it.</h1>
           <p className="lede">
-            Reflow observes approved browser systems during explicit study
-            windows, then groups the activity into recurring tasks. No workflow
-            names or process manuals required.
+            Reflow observes approved browser systems to map your real processes.
+            Then, we transform those insights into custom AI agents using proven
+            execution harnesses—in days, not months.
           </p>
           <ul className="promise-list">
             <li>Browser interactions only</li>
@@ -1173,18 +1173,22 @@ function ObserverSetup({
     });
     if (!parsed.success)
       return setError('Choose a department and select or enter your role.');
-    const { error: profileError } = await supabase
-      .from('observer_profiles')
-      .upsert(
-        {
+    const editableDefaults = {
+      default_department_id: parsed.data.departmentId,
+      default_job_role_id: parsed.data.jobRoleId,
+      custom_role: parsed.data.customRole,
+    };
+    const { error: profileError } = profile
+      ? await supabase
+          .from('observer_profiles')
+          .update(editableDefaults)
+          .eq('workspace_id', parsed.data.workspaceId)
+          .eq('observer_id', parsed.data.observerId)
+      : await supabase.from('observer_profiles').insert({
           workspace_id: parsed.data.workspaceId,
           observer_id: parsed.data.observerId,
-          default_department_id: parsed.data.departmentId,
-          default_job_role_id: parsed.data.jobRoleId,
-          custom_role: parsed.data.customRole,
-        },
-        { onConflict: 'workspace_id,observer_id' },
-      );
+          ...editableDefaults,
+        });
     if (profileError) setError(profileError.message);
     else {
       setMessage('Your defaults are saved for future observation windows.');

@@ -1,0 +1,324 @@
+import { browser, type Browser } from 'wxt/browser';
+import { defineBackground } from 'wxt/utils/define-background';
+
+import { parseExtensionRequest } from '../lib/messages';
+import type {
+  ActiveObservationState,
+  ExtensionResponse,
+  ObserverDefaults,
+  PopupSnapshot,
+} from '../lib/model';
+import { enqueueCapturedEvent, flushQueue, queueStatus } from '../lib/queue';
+import {
+  domainPermissionPatterns,
+  isObservableUrl,
+  normalizeBrowserUrl,
+} from '../lib/scope';
+import { createOutOfScopeGap, createSanitizedEvent } from '../lib/sanitizer';
+import {
+  clearObservationState,
+  getObservationState,
+  setObservationState,
+} from '../lib/storage';
+import {
+  joinStudy,
+  loadStudySetup,
+  saveObserverDefaults,
+  startObservation,
+  transitionObservation,
+} from '../lib/supabase';
+
+const observerScriptId = 'reflow-observer';
+const observerScriptFile = '/content-scripts/observer.js' as const;
+const retryAlarmName = 'reflow-delivery-retry';
+
+function configuration(state: ActiveObservationState | null) {
+  return {
+    active: state?.status === 'active',
+    domains: state?.domains ?? [],
+    exclusions: state?.exclusions ?? [],
+  };
+}
+
+async function setBadge(status: 'active' | 'paused' | 'off') {
+  await browser.action.setBadgeText({
+    text: status === 'active' ? 'REC' : status === 'paused' ? 'II' : '',
+  });
+  if (status !== 'off') {
+    await browser.action.setBadgeBackgroundColor({
+      color: status === 'active' ? '#dc3f4f' : '#c18b22',
+    });
+  }
+}
+
+async function unregisterObserverScript() {
+  try {
+    await browser.scripting.unregisterContentScripts({
+      ids: [observerScriptId],
+    });
+  } catch {
+    // An absent runtime registration is already the desired state.
+  }
+}
+
+function permissionPatterns(state: ActiveObservationState) {
+  return [...new Set(state.domains.flatMap(domainPermissionPatterns))];
+}
+
+async function notifyContentScripts(state: ActiveObservationState | null) {
+  const tabs = await browser.tabs.query({});
+  await Promise.allSettled(
+    tabs.map(async (tab) => {
+      if (!tab.id || tab.incognito || !tab.url?.startsWith('http')) return;
+      await browser.tabs.sendMessage(tab.id, {
+        configuration: configuration(state),
+        type: 'recording:configuration',
+      });
+    }),
+  );
+}
+
+async function registerObserverScript(state: ActiveObservationState) {
+  const matches = permissionPatterns(state);
+  if (matches.length === 0) throw new Error('approved_domains_required');
+  const hasPermissions = await browser.permissions.contains({
+    origins: matches,
+  });
+  if (!hasPermissions) throw new Error('host_permission_required');
+
+  await unregisterObserverScript();
+  await browser.scripting.registerContentScripts([
+    {
+      id: observerScriptId,
+      js: [observerScriptFile],
+      matches,
+      persistAcrossSessions: false,
+      runAt: 'document_start',
+    },
+  ]);
+
+  const tabs = await browser.tabs.query({});
+  await Promise.allSettled(
+    tabs.map(async (tab) => {
+      if (
+        !tab.id ||
+        tab.incognito ||
+        !tab.url ||
+        !isObservableUrl(tab.url, state.domains, state.exclusions)
+      )
+        return;
+      await browser.scripting.executeScript({
+        files: [observerScriptFile],
+        target: { tabId: tab.id },
+      });
+    }),
+  );
+  await notifyContentScripts(state);
+}
+
+async function popupSnapshot(): Promise<PopupSnapshot> {
+  const [setup, state, delivery] = await Promise.all([
+    loadStudySetup(),
+    getObservationState(),
+    queueStatus(),
+  ]);
+  return {
+    ...setup,
+    ...delivery,
+    recording: state
+      ? {
+          departmentId: state.departmentId,
+          jobRoleId: state.jobRoleId,
+          status: state.status,
+          windowId: state.windowId,
+        }
+      : null,
+  };
+}
+
+function defaultsFromRequest(request: {
+  customRole: string | null;
+  departmentId: string;
+  jobRoleId: string | null;
+}): ObserverDefaults {
+  if ((request.jobRoleId === null) === (request.customRole === null))
+    throw new Error('exactly_one_role_required');
+  return {
+    customRole: request.customRole,
+    departmentId: request.departmentId,
+    jobRoleId: request.jobRoleId,
+  };
+}
+
+async function startRecording(defaults: ObserverDefaults) {
+  const activeTabs = await browser.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  const activeTab = activeTabs[0];
+  if (!activeTab?.url || activeTab.incognito)
+    throw new Error('approved_active_tab_required');
+
+  const state = await startObservation(defaults);
+  if (!isObservableUrl(activeTab.url, state.domains, state.exclusions)) {
+    await transitionObservation(state.windowId, 'cancelled');
+    throw new Error('approved_active_tab_required');
+  }
+  try {
+    await setObservationState(state);
+    await registerObserverScript(state);
+    await setBadge('active');
+  } catch (error) {
+    await clearObservationState();
+    await transitionObservation(state.windowId, 'cancelled');
+    throw error;
+  }
+}
+
+async function transitionRecording(status: 'active' | 'paused' | 'completed') {
+  const state = await getObservationState();
+  if (!state) throw new Error('observation_not_active');
+
+  // The database accepts events only while the window is active. Drain the
+  // sanitized queue before pausing or completing so retries never target a
+  // closed window.
+  if (status !== 'active') {
+    await flushQueue();
+    if ((await queueStatus()).queueSize > 0)
+      throw new Error('events_pending_delivery');
+  }
+  await transitionObservation(state.windowId, status);
+
+  if (status === 'completed') {
+    await clearObservationState();
+    await unregisterObserverScript();
+    await notifyContentScripts(null);
+    await setBadge('off');
+    return;
+  }
+
+  state.status = status;
+  await setObservationState(state);
+  if (status === 'active') await registerObserverScript(state);
+  await notifyContentScripts(state);
+  await setBadge(status);
+}
+
+async function recordTabScope(tabId: number) {
+  const state = await getObservationState();
+  if (!state || state.status !== 'active') return;
+  const tab = await browser.tabs.get(tabId);
+  if (tab.incognito || !tab.url) return;
+
+  if (isObservableUrl(tab.url, state.domains, state.exclusions)) {
+    const location = normalizeBrowserUrl(tab.url);
+    const actionType =
+      state.lastScope === 'approved' &&
+      state.lastHostname !== null &&
+      state.lastHostname !== location.hostname
+        ? 'domain_transition'
+        : 'tab_activate';
+    state.lastScope = 'approved';
+    state.lastHostname = location.hostname;
+    await setObservationState(state);
+    await enqueueCapturedEvent(
+      createSanitizedEvent(tab.url, { actionType }),
+      tabId,
+      tab.url,
+    );
+  } else if (state.lastScope !== 'gap') {
+    state.lastScope = 'gap';
+    state.lastHostname = null;
+    await setObservationState(state);
+    await enqueueCapturedEvent(createOutOfScopeGap(), tabId, tab.url);
+  }
+  await flushQueue();
+}
+
+async function handleRequest(
+  rawRequest: unknown,
+  sender: Browser.runtime.MessageSender,
+): Promise<ExtensionResponse<unknown>> {
+  const request = parseExtensionRequest(rawRequest);
+  if (!request) return { ok: false, error: 'invalid_message' };
+
+  try {
+    switch (request.type) {
+      case 'setup:get':
+        return { ok: true, data: await popupSnapshot() };
+      case 'setup:join':
+        await joinStudy(request.inviteCode);
+        return { ok: true, data: await popupSnapshot() };
+      case 'setup:save-defaults':
+        await saveObserverDefaults(defaultsFromRequest(request));
+        return { ok: true, data: await popupSnapshot() };
+      case 'recording:start':
+        await startRecording(defaultsFromRequest(request));
+        return { ok: true, data: await popupSnapshot() };
+      case 'recording:pause':
+        await transitionRecording('paused');
+        return { ok: true, data: await popupSnapshot() };
+      case 'recording:resume':
+        await transitionRecording('active');
+        return { ok: true, data: await popupSnapshot() };
+      case 'recording:stop':
+        await transitionRecording('completed');
+        return { ok: true, data: await popupSnapshot() };
+      case 'content:get-config': {
+        if (!sender.tab || sender.tab.incognito)
+          return { ok: false, error: 'content_sender_required' };
+        return {
+          ok: true,
+          data: configuration(await getObservationState()),
+        };
+      }
+      case 'capture:event': {
+        if (!sender.tab?.id || sender.tab.incognito || !sender.tab.url)
+          return { ok: false, error: 'content_sender_required' };
+        const accepted = await enqueueCapturedEvent(
+          request.event,
+          sender.tab.id,
+          sender.tab.url,
+        );
+        if (accepted) await flushQueue();
+        return accepted
+          ? { ok: true, data: undefined }
+          : { ok: false, error: 'event_rejected' };
+      }
+    }
+    return { ok: false, error: 'invalid_message' };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'operation_failed',
+    };
+  }
+}
+
+export default defineBackground(() => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    void handleRequest(message, sender).then(sendResponse);
+    return true;
+  });
+  browser.tabs.onActivated.addListener(({ tabId }) => {
+    void recordTabScope(tabId);
+  });
+  browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.url) void recordTabScope(tabId);
+  });
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === retryAlarmName) void flushQueue();
+  });
+  browser.runtime.onStartup.addListener(() => {
+    void clearObservationState();
+    void unregisterObserverScript();
+    void setBadge('off');
+  });
+  browser.runtime.onInstalled.addListener(() => {
+    void clearObservationState();
+    void unregisterObserverScript();
+    void setBadge('off');
+  });
+  void browser.alarms.create(retryAlarmName, { periodInMinutes: 1 });
+  void flushQueue();
+});

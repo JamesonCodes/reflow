@@ -15,9 +15,15 @@ Local worker ------> Vercel AI Gateway
 
 ## Runtime boundaries
 
-The Chrome extension is the observation boundary. Beginning in Phase 3, its
-content script will sanitize DOM data before extension IPC. The extension uses
-only a Supabase publishable key and never receives trusted server credentials.
+The Chrome extension is the observation boundary. Its content script sanitizes
+DOM data before extension IPC, and the service worker accepts only the shared
+`SanitizedCapturedEvent` contract. The extension uses only a Supabase
+publishable key and never receives trusted server credentials.
+
+Observation state lives in extension session storage, while the offline queue
+contains sanitized events only. Approved host permissions are requested during
+the observer's explicit start gesture. Runtime content scripts are registered
+without persistence, so Chrome restart cannot silently resume observation.
 
 Hosted Supabase provides Auth, Postgres, and Realtime. Schema changes are
 committed as migrations and pushed to a linked hosted development project.

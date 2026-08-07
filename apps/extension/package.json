@@ -4,8 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit",
-    "dev": "tsc --noEmit --watch --preserveWatchOutput",
-    "typecheck": "tsc --noEmit"
+    "build": "wxt build -b chrome",
+    "dev": "wxt -b chrome",
+    "postinstall": "wxt prepare",
+    "test": "vitest run",
+    "typecheck": "wxt prepare && tsc --noEmit"
+  },
+  "dependencies": {
+    "@reflow/contracts": "workspace:*",
+    "@supabase/supabase-js": "2.112.1",
+    "wxt": "0.21.3",
+    "zod": "4.0.14"
+  },
+  "devDependencies": {
+    "happy-dom": "20.11.1",
+    "vitest": "3.2.4"
   }
 }

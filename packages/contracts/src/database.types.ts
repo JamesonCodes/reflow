@@ -670,6 +670,61 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      start_observation_window: {
+        Args: {
+          target_custom_role?: string;
+          target_department_id: string;
+          target_job_role_id?: string;
+          target_window_id: string;
+        };
+        Returns: {
+          created_at: string;
+          department_id: string;
+          department_snapshot: string;
+          ended_at: string | null;
+          id: string;
+          installation_id: string;
+          job_role_id: string | null;
+          observer_id: string;
+          paused_at: string | null;
+          role_snapshot: string | null;
+          started_at: string;
+          status: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'observation_windows';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      transition_observation_window: {
+        Args: { target_status: string; target_window_id: string };
+        Returns: {
+          created_at: string;
+          department_id: string;
+          department_snapshot: string;
+          ended_at: string | null;
+          id: string;
+          installation_id: string;
+          job_role_id: string | null;
+          observer_id: string;
+          paused_at: string | null;
+          role_snapshot: string | null;
+          started_at: string;
+          status: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'observation_windows';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
     };
     Enums: {
       [_ in never]: never;

@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { sanitizedCapturedEventSchema } from './observation';
+import {
+  queuedCapturedEventSchema,
+  sanitizedCapturedEventSchema,
+} from './observation';
 
 const validEvent = {
-  id: '10000000-0000-4000-8000-000000000001',
-  observationWindowId: '10000000-0000-4000-8000-000000000002',
-  workspaceId: '10000000-0000-4000-8000-000000000003',
-  observerId: '10000000-0000-4000-8000-000000000004',
-  sequenceNo: 1,
+  clientEventId: '10000000-0000-4000-8000-000000000001',
   actionType: 'input',
   hostname: 'billing.example.test',
   normalizedPath: '/invoices/new',
@@ -15,20 +14,25 @@ const validEvent = {
   elementLabel: 'Invoice amount',
   pageLandmark: 'Invoice form',
   semanticInputToken: '[NUMBER:CURRENCY]',
-  tabId: 1,
   occurredAt: '2026-08-01T12:00:00.000Z',
 } as const;
 
 describe('sanitizedCapturedEventSchema', () => {
-  it('accepts only normalized browser metadata', () => {
+  it('accepts only normalized browser metadata across IPC', () => {
     expect(sanitizedCapturedEventSchema.parse(validEvent)).toEqual(validEvent);
   });
 
-  it('rejects raw values and arbitrary metadata', () => {
+  it('rejects raw values, arbitrary metadata, and PII-bearing labels', () => {
     expect(
       sanitizedCapturedEventSchema.safeParse({
         ...validEvent,
         rawValue: 'person@example.com',
+      }).success,
+    ).toBe(false);
+    expect(
+      sanitizedCapturedEventSchema.safeParse({
+        ...validEvent,
+        elementLabel: 'person@example.com',
       }).success,
     ).toBe(false);
   });
@@ -53,5 +57,20 @@ describe('sanitizedCapturedEventSchema', () => {
         semanticInputToken: null,
       }).success,
     ).toBe(true);
+  });
+
+  it('separates trusted queue identity from content-script IPC', () => {
+    const { clientEventId, ...sanitizedFields } = validEvent;
+    expect(
+      queuedCapturedEventSchema.parse({
+        ...sanitizedFields,
+        id: clientEventId,
+        observationWindowId: '10000000-0000-4000-8000-000000000002',
+        workspaceId: '10000000-0000-4000-8000-000000000003',
+        observerId: '10000000-0000-4000-8000-000000000004',
+        sequenceNo: 1,
+        tabId: 1,
+      }),
+    ).toMatchObject({ sequenceNo: 1, tabId: 1 });
   });
 });

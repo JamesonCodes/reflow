@@ -14,7 +14,7 @@ export const capturedActionTypeSchema = z.enum([
   'out_of_scope_gap',
 ]);
 
-const hostnameSchema = z
+export const capturedHostnameSchema = z
   .string()
   .min(1)
   .max(253)
@@ -22,34 +22,51 @@ const hostnameSchema = z
     /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/,
   );
 
-const normalizedPathSchema = z
+export const normalizedBrowserPathSchema = z
   .string()
   .min(1)
   .max(512)
   .startsWith('/')
   .refine((value) => !value.includes('?') && !value.includes('#'));
 
-const semanticInputTokenSchema = z
+export const semanticInputTokenSchema = z
   .string()
   .min(3)
   .max(64)
   .regex(/^\[[A-Z][A-Z0-9_]*(?::[A-Z0-9_-]+)?\]$/);
 
+const boundedSanitizedTextSchema = z
+  .string()
+  .min(1)
+  .max(160)
+  .refine(
+    (value) =>
+      !/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value) &&
+      !/(?:\+?\d[\d ().-]{5,}\d)/.test(value) &&
+      !/(?:\d[ -]?){13,19}/.test(value) &&
+      !/\b\d{3}-?\d{2}-?\d{4}\b/.test(value) &&
+      !/https?:\/\//i.test(value) &&
+      !/<[^>]+>/.test(value),
+    'Sanitized text cannot contain PII, URLs, or HTML',
+  );
+
+const elementRoleSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z][a-z0-9_-]*$/);
+
+/** The only browser event shape permitted across extension IPC. */
 export const sanitizedCapturedEventSchema = z
   .strictObject({
-    id: z.uuid(),
-    observationWindowId: z.uuid(),
-    workspaceId: z.uuid(),
-    observerId: z.uuid(),
-    sequenceNo: z.number().int().positive(),
+    clientEventId: z.uuid(),
     actionType: capturedActionTypeSchema,
-    hostname: hostnameSchema.nullable(),
-    normalizedPath: normalizedPathSchema.nullable(),
-    elementRole: z.string().min(1).max(64).nullable(),
-    elementLabel: z.string().min(1).max(160).nullable(),
-    pageLandmark: z.string().min(1).max(160).nullable(),
+    hostname: capturedHostnameSchema.nullable(),
+    normalizedPath: normalizedBrowserPathSchema.nullable(),
+    elementRole: elementRoleSchema.nullable(),
+    elementLabel: boundedSanitizedTextSchema.nullable(),
+    pageLandmark: boundedSanitizedTextSchema.nullable(),
     semanticInputToken: semanticInputTokenSchema.nullable(),
-    tabId: z.number().int().positive(),
     occurredAt: z.iso.datetime({ offset: true }),
   })
   .superRefine((event, context) => {
@@ -78,6 +95,24 @@ export const sanitizedCapturedEventSchema = z
     }
   });
 
+/** Sanitized event after the service worker adds trusted identity and ordering. */
+export const queuedCapturedEventSchema = z.strictObject({
+  id: z.uuid(),
+  observationWindowId: z.uuid(),
+  workspaceId: z.uuid(),
+  observerId: z.uuid(),
+  sequenceNo: z.number().int().positive(),
+  actionType: capturedActionTypeSchema,
+  hostname: capturedHostnameSchema.nullable(),
+  normalizedPath: normalizedBrowserPathSchema.nullable(),
+  elementRole: elementRoleSchema.nullable(),
+  elementLabel: boundedSanitizedTextSchema.nullable(),
+  pageLandmark: boundedSanitizedTextSchema.nullable(),
+  semanticInputToken: semanticInputTokenSchema.nullable(),
+  tabId: z.number().int().positive(),
+  occurredAt: z.iso.datetime({ offset: true }),
+});
+
 export const observationWindowStatusSchema = z.enum([
   'active',
   'paused',
@@ -104,4 +139,5 @@ export type CapturedActionType = z.infer<typeof capturedActionTypeSchema>;
 export type SanitizedCapturedEvent = z.infer<
   typeof sanitizedCapturedEventSchema
 >;
+export type QueuedCapturedEvent = z.infer<typeof queuedCapturedEventSchema>;
 export type ObservationWindow = z.infer<typeof observationWindowSchema>;

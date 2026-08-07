@@ -11,7 +11,7 @@ Reflow is not deployed and does not execute browser agents.
 ## Architecture
 
 - `apps/web` — local Next.js study setup, analysis, and approval interface
-- `apps/extension` — unpacked Chrome extension (implemented in Phase 3)
+- `apps/extension` — unpacked Chrome extension for explicit observation windows
 - `apps/worker` — local durable processing worker
 - `packages/contracts` — shared runtime schemas and TypeScript contracts
 - `packages/ai` — exclusive AI Gateway boundary (used beginning with task inference)
@@ -67,8 +67,32 @@ paths, and generate revocable observer invites.
 Observers choose **Observer**, redeem an invite, and save a required department
 plus either a common or custom role. These are grouping defaults only: Reflow
 does not ask observers to identify workflows or expected tasks. Browser
-observation remains disabled until the explicit controls are implemented in
-Phase 3.
+observation starts only when the observer explicitly chooses **Start** in the
+unpacked extension.
+
+## Phase 3 browser observer
+
+The extension uses the same hosted Supabase project as the local interface. Add
+`WXT_SUPABASE_URL` and `WXT_SUPABASE_PUBLISHABLE_KEY` to `.env.local`, then run:
+
+```sh
+pnpm --filter @reflow/extension build
+```
+
+In Chrome, open `chrome://extensions`, enable **Developer mode**, choose **Load
+unpacked**, and select `apps/extension/.output/chrome-mv3`. The extension remains
+local and unpacked.
+
+Redeem an observer invite in the extension, choose a department and role, and
+open an approved browser system. **Start observation** requests access only to
+the study's approved domains. Pause, resume, and stop are always explicit. An
+active observation never resumes after Chrome restarts and does not run in
+Incognito.
+
+Only sanitized browser metadata crosses extension messaging. Password values
+are never read. File interactions retain only generalized type and size
+categories—not filenames, paths, contents, or bytes. Unapproved pages produce at
+most an anonymous gap marker without their hostname or page details.
 
 ## Delivery
 

@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       '.agents/**',
       '**/.next/**',
+      '**/.output/**',
       '**/.wxt/**',
       '**/coverage/**',
       '**/dist/**',

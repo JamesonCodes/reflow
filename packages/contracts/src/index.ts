@@ -8,11 +8,16 @@ export {
 } from './environment';
 export {
   capturedActionTypeSchema,
+  capturedHostnameSchema,
+  normalizedBrowserPathSchema,
   observationWindowSchema,
   observationWindowStatusSchema,
+  queuedCapturedEventSchema,
   sanitizedCapturedEventSchema,
+  semanticInputTokenSchema,
   type CapturedActionType,
   type ObservationWindow,
+  type QueuedCapturedEvent,
   type SanitizedCapturedEvent,
 } from './observation';
 export {

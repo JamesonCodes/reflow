@@ -13,6 +13,10 @@ Hosted Supabase <--- local Next.js UI
 Local worker ------> Vercel AI Gateway
 ```
 
+The local workflow lab serves synthetic AP, ERP, and payment experiences on
+separate `*.localhost` hostnames. It provides deterministic browser traces for
+extension verification now and process-mining demonstrations in later phases.
+
 ## Runtime boundaries
 
 The Chrome extension is the observation boundary. Its content script sanitizes

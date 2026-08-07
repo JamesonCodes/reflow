@@ -38,4 +38,11 @@ export default tseslint.config(
     files: ['**/*.config.{js,mjs,ts}', '**/*.d.ts'],
     extends: [tseslint.configs.disableTypeChecked],
   },
+  {
+    files: ['apps/demo/public/**/*.js'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
 );

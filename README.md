@@ -12,6 +12,7 @@ Reflow is not deployed and does not execute browser agents.
 
 - `apps/web` — local Next.js study setup, analysis, and approval interface
 - `apps/extension` — unpacked Chrome extension for explicit observation windows
+- `apps/demo` — synthetic multi-system workflow fixture for observation testing
 - `apps/worker` — local durable processing worker
 - `packages/contracts` — shared runtime schemas and TypeScript contracts
 - `packages/ai` — exclusive AI Gateway boundary (used beginning with task inference)
@@ -34,6 +35,7 @@ Docker and a local Supabase stack are intentionally not used.
 ```sh
 pnpm install
 pnpm dev
+pnpm demo
 pnpm format:check
 pnpm lint
 pnpm typecheck
@@ -44,6 +46,7 @@ pnpm check
 
 `pnpm dev` starts the currently implemented local application shells. As later
 phases land, it will also start the extension watcher and processing worker.
+`pnpm demo` starts only the reusable browser workflow fixture.
 
 ## Phase 2 study setup
 
@@ -93,6 +96,29 @@ Only sanitized browser metadata crosses extension messaging. Password values
 are never read. File interactions retain only generalized type and size
 categories—not filenames, paths, contents, or bytes. Unapproved pages produce at
 most an anonymous gap marker without their hostname or page details.
+
+### Synthetic workflow lab
+
+Start the reusable demo separately when testing browser observation:
+
+```sh
+pnpm demo
+```
+
+Open [http://ap.localhost:3100](http://ap.localhost:3100). In the Reflow study
+setup, approve `localhost` and enable **Include subdomains**. Add `/private` as a
+privacy exclusion for that domain. Do not approve `127.0.0.1`.
+
+The guided Accounts Payable walkthrough moves one fictional invoice through:
+
+1. `ap.localhost:3100` — invoice intake and review.
+2. `erp.localhost:3100` — vendor validation and an intentional navigation detour.
+3. `bank.localhost:3100` — payment setup, submission, and a synthetic download.
+
+The lab also includes traditional page loads, SPA and hash transitions, form
+submissions, sentinel PII fields, a password field, file upload/download actions,
+tab-switch prompts, an excluded `/private` route, and an unapproved
+`127.0.0.1:3100` page. Every record shown in the lab is synthetic.
 
 ## Delivery
 

@@ -1,131 +1,271 @@
 # Reflow
 
-Reflow is a local-first process discovery and redesign prototype. It combines
-privacy-safe browser observation with process mining and AI-assisted future-state
-workflow design.
+> **Let agents learn your work. Then automate it.**
 
-Reflow application code runs on your computer. Hosted Supabase provides durable
-data services, while Vercel AI Gateway provides a provider-neutral model API.
-Reflow is not deployed and does not execute browser agents.
+Reflow is a local-first, browser-only process discovery and redesign prototype.
+During explicit observation windows, it records privacy-safe interaction metadata
+across approved browser systems, reconstructs how work actually happens, and
+prepares evidence-backed process improvements for analyst review.
 
-## Architecture
+The prototype is designed as an open-source portfolio project. All Reflow
+application processes run locally; hosted Supabase provides authentication and
+durable data, while Vercel AI Gateway will provide a provider-neutral model
+boundary beginning with task inference.
 
-- `apps/web` — local Next.js study setup, analysis, and approval interface
-- `apps/extension` — unpacked Chrome extension for explicit observation windows
-- `apps/demo` — synthetic multi-system workflow fixture for observation testing
-- `apps/worker` — local durable processing worker
-- `packages/contracts` — shared runtime schemas and TypeScript contracts
-- `packages/ai` — exclusive AI Gateway boundary (used beginning with task inference)
-- `supabase` — hosted Supabase migrations and verification assets
+Reflow currently covers study setup and privacy-safe browser observation. Process
+inference, mining, redesign, and export are delivered incrementally through the
+[project roadmap](docs/roadmap.md).
 
-See [docs/architecture.md](docs/architecture.md) for the runtime boundaries and
-phased delivery model.
+## Why Reflow
+
+Traditional process discovery often starts with interviews and process manuals.
+Those sources are useful, but they can be incomplete or outdated. Reflow starts
+with observed browser activity instead:
+
+- What tasks does a team repeatedly perform?
+- Which browser systems participate in each task?
+- Where do people backtrack, re-enter data, wait, or abandon work?
+- Which process variants are common, and which are exceptional?
+- What could be simplified or automated without losing controls?
+
+Department and role selections provide grouping context. They never prescribe
+which tasks Reflow expects to find.
+
+## How it works
+
+```text
+Explicit observation window
+          |
+          v
+Chrome content script --- local classification and redaction
+          |
+          v
+Sanitized extension queue --- retries, ordering, duplicate protection
+          |
+          v
+Hosted Supabase --- observations, events, jobs, and process evidence
+          |
+          v
+Local worker + Vercel AI Gateway --- task inference and process analysis
+          |
+          v
+Local Next.js UI --- analyst correction, redesign, approval, and export
+```
+
+The content script is the privacy boundary. Raw input values are discarded before
+extension messaging, background memory, storage, logs, or Supabase requests.
+
+## Current status
+
+| Phase | Capability                            | Status   |
+| ----- | ------------------------------------- | -------- |
+| 0     | Repository foundation                 | Complete |
+| 1     | Browser observation schema            | Complete |
+| 2     | Study setup and user guidance         | Complete |
+| 3     | Privacy-safe browser observer         | Complete |
+| 4     | Step normalization and task inference | Next     |
+| 5     | As-Is process mining                  | Planned  |
+| 6     | Analysis and To-Be redesign           | Planned  |
+| 7     | Export and portfolio hardening        | Planned  |
+
+See [docs/roadmap.md](docs/roadmap.md) for the scope, checkpoint, and commit
+history of every phase.
+
+## Privacy model
+
+Reflow is intentionally constrained:
+
+- Observation starts only after an explicit user gesture.
+- Only administrator-approved domains can be observed.
+- Sensitive URL paths can be excluded from observation.
+- Password values are rejected before their value is read.
+- Input values become semantic tokens such as `[EMAIL]`, `[DATE]`, or
+  `[NUMBER:CURRENCY]`.
+- Dynamic record identifiers are generalized in paths and labels.
+- Uploads and downloads retain only generalized type and size categories.
+- Unapproved systems produce anonymous `out_of_scope_gap` events without host,
+  path, or DOM details.
+- Chrome restart never silently resumes an observation.
+- Raw events are immutable and isolated by workspace in Supabase.
+
+Reflow does not observe local applications, read document contents, record the
+screen, capture keystrokes globally, or run in Incognito.
+
+## Repository structure
+
+| Path                 | Responsibility                                               |
+| -------------------- | ------------------------------------------------------------ |
+| `apps/web`           | Local Next.js study setup, analysis, and approval interface  |
+| `apps/extension`     | Unpacked WXT Manifest V3 Chrome observer                     |
+| `apps/demo`          | Synthetic multi-system browser workflow lab                  |
+| `apps/worker`        | Local durable processing worker                              |
+| `packages/contracts` | Shared Zod schemas, database types, and TypeScript contracts |
+| `packages/ai`        | Exclusive Vercel AI Gateway boundary for model calls         |
+| `supabase`           | Hosted Supabase migrations and verification assets           |
+| `docs`               | Architecture and phased implementation documentation         |
 
 ## Requirements
 
 - Node.js 22 or newer
 - pnpm 9.12.3
-- A hosted Supabase project (required beginning in Phase 1)
-- A Vercel AI Gateway key (required beginning with AI task inference)
+- Google Chrome or another Chromium browser that supports unpacked extensions
+- A hosted Supabase project
+- A Vercel AI Gateway key beginning with Phase 4
 
-Docker and a local Supabase stack are intentionally not used.
+Docker, a local Supabase stack, application deployment, and local-machine capture
+are intentionally not required.
 
-## Local commands
+## Local setup
+
+### 1. Install dependencies
+
+From the repository root:
 
 ```sh
 pnpm install
-pnpm dev
-pnpm demo
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm check
 ```
 
-`pnpm dev` starts the currently implemented local application shells. As later
-phases land, it will also start the extension watcher and processing worker.
-`pnpm demo` starts only the reusable browser workflow fixture.
+### 2. Configure the environment
 
-## Phase 2 study setup
+Copy `.env.example` to `.env.local` and provide values for:
 
-Copy `.env.example` to `.env.local`, then configure the hosted Supabase URL,
-publishable key, and secret key. Add one or more comma-separated email addresses
-to `REFLOW_ADMIN_EMAILS`. The secret key and administrator allowlist are read
-only by the local Next.js server and are never included in browser code. Never
-commit `.env.local`.
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+WXT_SUPABASE_URL=https://your-project.supabase.co
+WXT_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+SUPABASE_SECRET_KEY=your-secret-key
+REFLOW_ADMIN_EMAILS=you@example.com
+AI_GATEWAY_API_KEY=your-ai-gateway-key
+```
+
+The secret key and administrator allowlist are read only by trusted local
+processes. Never commit `.env.local`.
 
 In the hosted Supabase dashboard:
 
-1. Enable anonymous sign-ins under Authentication settings.
-2. Add `http://localhost:3000` as the Site URL and an allowed redirect URL.
-3. Keep email magic-link sign-in enabled.
+1. Enable anonymous sign-ins.
+2. Keep email magic-link sign-in enabled.
+3. Set `http://localhost:3000` as the Site URL.
+4. Add `http://localhost:3000` as an allowed redirect URL.
 
-Start the local interface with `pnpm dev`, choose **Administrator**, and use an
-allowlisted email address. Administrators can create a study workspace, define
-departments and common roles, approve browser domains, exclude sensitive URL
-paths, and generate revocable observer invites.
+The repository is linked to a hosted Supabase project through the Supabase CLI;
+no local database is started.
 
-Observers choose **Observer**, redeem an invite, and save a required department
-plus either a common or custom role. These are grouping defaults only: Reflow
-does not ask observers to identify workflows or expected tasks. Browser
-observation starts only when the observer explicitly chooses **Start** in the
-unpacked extension.
+### 3. Start Reflow and the workflow lab
 
-## Phase 3 browser observer
+Run this from the repository root:
 
-The extension uses the same hosted Supabase project as the local interface. Add
-`WXT_SUPABASE_URL` and `WXT_SUPABASE_PUBLISHABLE_KEY` to `.env.local`, then run:
+```sh
+pnpm dev
+```
+
+This starts the local dashboard, worker, extension watcher, and synthetic browser
+systems:
+
+| Experience         | URL                                                      |
+| ------------------ | -------------------------------------------------------- |
+| Reflow dashboard   | [http://localhost:3000](http://localhost:3000)           |
+| Invoice Hub        | [http://ap.localhost:3100](http://ap.localhost:3100)     |
+| Atlas ERP          | [http://erp.localhost:3100](http://erp.localhost:3100)   |
+| Clearline Payments | [http://bank.localhost:3100](http://bank.localhost:3100) |
+
+Modern browsers resolve `*.localhost` to the local machine. Press `Ctrl+C` to
+stop every process. To run only the synthetic systems, use `pnpm demo`.
+
+### 4. Load the Chrome extension
+
+Build the extension at least once:
 
 ```sh
 pnpm --filter @reflow/extension build
 ```
 
-In Chrome, open `chrome://extensions`, enable **Developer mode**, choose **Load
-unpacked**, and select `apps/extension/.output/chrome-mv3`. The extension remains
-local and unpacked.
+Then:
 
-Redeem an observer invite in the extension, choose a department and role, and
-open an approved browser system. **Start observation** requests access only to
-the study's approved domains. Pause, resume, and stop are always explicit. An
-active observation never resumes after Chrome restarts and does not run in
-Incognito.
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Choose **Load unpacked**.
+4. Select `apps/extension/.output/chrome-mv3`.
+5. After rebuilding, use the extension card's **Reload** button rather than
+   removing the extension.
 
-Only sanitized browser metadata crosses extension messaging. Password values
-are never read. File interactions retain only generalized type and size
-categories—not filenames, paths, contents, or bytes. Unapproved pages produce at
-most an anonymous gap marker without their hostname or page details.
+### 5. Configure and run an observation
 
-### Synthetic workflow lab
+1. Open the Reflow dashboard and sign in as an allowlisted administrator.
+2. Create a workspace, department, role, and extension invite.
+3. Approve `localhost` and enable **Include subdomains**.
+4. Add `/private` as a privacy exclusion.
+5. Do not approve `127.0.0.1`; the demo uses it to verify anonymous gaps.
+6. Redeem the invite in the extension and save observer defaults.
+7. Open Invoice Hub and explicitly start an observation.
+8. Follow the guided workflow through Invoice Hub, Atlas ERP, and Clearline
+   Payments.
+9. Stop the observation from the extension.
 
-Start the reusable demo separately when testing browser observation:
+All records in the workflow lab are synthetic.
 
-```sh
-pnpm demo
+## Verify captured events
+
+Run this in the hosted Supabase SQL Editor:
+
+```sql
+with latest_window as (
+  select id
+  from public.observation_windows
+  order by started_at desc
+  limit 1
+)
+select
+  sequence_no,
+  action_type,
+  hostname,
+  normalized_path,
+  element_role,
+  element_label,
+  page_landmark,
+  semantic_input_token,
+  tab_id,
+  occurred_at
+from public.raw_event_tokens
+where observation_window_id = (select id from latest_window)
+order by sequence_no;
 ```
 
-Open [http://ap.localhost:3100](http://ap.localhost:3100). In the Reflow study
-setup, approve `localhost` and enable **Include subdomains**. Add `/private` as a
-privacy exclusion for that domain. Do not approve `127.0.0.1`.
+Sequence numbers should be continuous. The results should contain semantic
+tokens and normalized paths, never raw form values, passwords, filenames, query
+strings, or out-of-scope host details.
 
-The guided Accounts Payable walkthrough moves one fictional invoice through:
+## Development commands
 
-1. `ap.localhost:3100` — invoice intake and review.
-2. `erp.localhost:3100` — vendor validation and an intentional navigation detour.
-3. `bank.localhost:3100` — payment setup, submission, and a synthetic download.
+| Command             | Purpose                                               |
+| ------------------- | ----------------------------------------------------- |
+| `pnpm dev`          | Start all local Reflow processes and the workflow lab |
+| `pnpm demo`         | Start only the synthetic browser systems              |
+| `pnpm format:check` | Check repository formatting                           |
+| `pnpm lint`         | Run ESLint                                            |
+| `pnpm typecheck`    | Type-check every workspace package                    |
+| `pnpm test`         | Run all unit and fixture tests                        |
+| `pnpm build`        | Build all applications and packages                   |
+| `pnpm check`        | Run formatting, linting, types, tests, and builds     |
 
-The lab also includes traditional page loads, SPA and hash transitions, form
-submissions, sentinel PII fields, a password field, file upload/download actions,
-tab-switch prompts, an excluded `/private` route, and an unapproved
-`127.0.0.1:3100` page. Every record shown in the lab is synthetic.
+## Project boundaries
 
-## Delivery
+This repository ends at browser process discovery, analysis, redesign, human
+approval, and export. Agent execution, MCP servers, skill generation, task replay,
+and deployment infrastructure are downstream concerns and are not implemented
+here.
 
-Each implementation phase is tested and committed independently. Work stops at
-the end of a successful phase so that its checkpoint can be reviewed before the
-next phase begins.
+Embeddings are also deferred. They will be introduced only if Phase 5 benchmark
+fixtures demonstrate that deterministic and sequence-based clustering is
+insufficient. Any future embedding configuration must use the exact variable
+name `REFLOW_EMBEDDING_MODEL`.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Incremental implementation roadmap](docs/roadmap.md)
 
 ## License
 
-MIT
+Reflow is available under the [MIT License](LICENSE).

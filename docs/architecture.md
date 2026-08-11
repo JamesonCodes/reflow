@@ -55,3 +55,6 @@ deployment infrastructure.
 
 Each phase is independently implemented, checked, and committed. A phase does
 not begin until the previous checkpoint has passed and been reviewed.
+
+See the [incremental implementation roadmap](roadmap.md) for every phase's
+scope, checkpoint, status, and delivery history.

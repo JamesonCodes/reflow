@@ -95,7 +95,13 @@ async function enqueueCapturedEventInternal(
   return true;
 }
 
-export function enqueueTabScopeEvent(chromeTabId: number, tabUrl: string) {
+export type TabScopeTrigger = 'activated' | 'url_changed';
+
+export function enqueueTabScopeEvent(
+  chromeTabId: number,
+  tabUrl: string,
+  trigger: TabScopeTrigger = 'activated',
+) {
   return serialize(async () => {
     const state = await getObservationState();
     if (!state || state.status !== 'active') return false;
@@ -103,15 +109,19 @@ export function enqueueTabScopeEvent(chromeTabId: number, tabUrl: string) {
     let event: SanitizedCapturedEvent;
     if (isObservableUrl(tabUrl, state.domains, state.exclusions)) {
       const location = normalizeBrowserUrl(tabUrl);
-      const actionType =
+      const crossedDomain =
         state.lastScope === 'approved' &&
         state.lastHostname !== null &&
-        state.lastHostname !== location.hostname
-          ? 'domain_transition'
-          : 'tab_activate';
+        state.lastHostname !== location.hostname;
       state.lastScope = 'approved';
       state.lastHostname = location.hostname;
-      event = createSanitizedEvent(tabUrl, { actionType });
+      if (!crossedDomain && trigger === 'url_changed') {
+        await setObservationState(state);
+        return false;
+      }
+      event = createSanitizedEvent(tabUrl, {
+        actionType: crossedDomain ? 'domain_transition' : 'tab_activate',
+      });
     } else {
       if (state.lastScope === 'gap') return false;
       state.lastScope = 'gap';

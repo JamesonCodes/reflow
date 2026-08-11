@@ -126,6 +126,26 @@ describe('serialized event sequencing', () => {
     expect(testState.queue).toEqual([]);
   });
 
+  it('does not emit tab activation noise for same-domain URL updates', async () => {
+    await enqueueTabScopeEvent(1, 'http://ap.localhost:3100/inbox');
+    await enqueueTabScopeEvent(
+      1,
+      'http://ap.localhost:3100/invoices/INV-1042',
+      'url_changed',
+    );
+    await enqueueTabScopeEvent(
+      1,
+      'http://erp.localhost:3100/vendors/ACME-42',
+      'url_changed',
+    );
+
+    expect(testState.queue.map((item) => item.event.actionType)).toEqual([
+      'tab_activate',
+      'domain_transition',
+    ]);
+    expect(testState.queue[1]?.event.normalizedPath).toBe('/vendors/:id');
+  });
+
   it('forces an interrupted queue past delivery backoff', async () => {
     const url = 'http://ap.localhost:3100/invoices';
     await enqueueCapturedEvent(

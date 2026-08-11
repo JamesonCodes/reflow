@@ -85,4 +85,75 @@ describe('DOM capture privacy', () => {
     expect(JSON.stringify(captured)).not.toContain('customer-payroll');
     expect(JSON.stringify(captured)).not.toContain('secret=1');
   });
+
+  it('uses the control label without select options or trailing helper text', () => {
+    const label = document.createElement('label');
+    label.append('Cost center');
+    const select = document.createElement('select');
+    for (const optionText of [
+      'Choose cost center',
+      'Operations — 4100',
+      'Facilities — 4200',
+    ]) {
+      const option = document.createElement('option');
+      option.textContent = optionText;
+      select.append(option);
+    }
+    label.append(select, 'Private helper text');
+    document.body.append(label);
+
+    let captured = null;
+    select.addEventListener('click', (click) => {
+      captured = captureDomEvent(click, 'https://erp.example.test/invoice');
+    });
+    select.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(captured).toMatchObject({
+      elementLabel: 'Cost center',
+      elementRole: 'combobox',
+    });
+    expect(JSON.stringify(captured)).not.toMatch(
+      /Operations|Facilities|Private helper/,
+    );
+  });
+
+  it('classifies numeric fields using their local control context', () => {
+    const label = document.createElement('label');
+    label.append('Payment amount');
+    const input = document.createElement('input');
+    input.inputMode = 'decimal';
+    input.value = '2840.00';
+    label.append(input);
+    document.body.append(label);
+
+    let captured = null;
+    input.addEventListener('change', (change) => {
+      captured = captureDomEvent(change, 'https://bank.example.test/payment');
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(captured).toMatchObject({
+      elementLabel: 'Payment amount',
+      semanticInputToken: '[NUMBER:CURRENCY]',
+    });
+    expect(JSON.stringify(captured)).not.toContain('2840.00');
+  });
+
+  it('redacts business record identifiers from link labels', () => {
+    const link = document.createElement('a');
+    link.href = '/invoices/INV-1042';
+    link.textContent = 'Open INV-1042';
+    document.body.append(link);
+
+    let captured = null;
+    link.addEventListener('click', (click) => {
+      captured = captureDomEvent(click, 'https://ap.example.test/inbox');
+      click.preventDefault();
+    });
+    link.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true }),
+    );
+
+    expect(captured).toMatchObject({ elementLabel: 'Open [RECORD_ID]' });
+  });
 });

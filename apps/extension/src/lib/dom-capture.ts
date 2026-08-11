@@ -42,7 +42,24 @@ function associatedLabel(element: Element) {
       element instanceof HTMLTextAreaElement) &&
     element.labels?.[0]
   ) {
-    return sanitizeBoundedText(element.labels[0].textContent);
+    const label = element.labels[0];
+    const controlText = element.textContent?.trim() ?? '';
+    const fullLabelText = label.textContent ?? '';
+    if (controlText) {
+      const controlOffset = fullLabelText.indexOf(controlText);
+      if (controlOffset >= 0)
+        return sanitizeBoundedText(fullLabelText.slice(0, controlOffset));
+    }
+    let textBeforeControl = '';
+    for (const child of label.childNodes) {
+      if (
+        child === element ||
+        (child instanceof Element && child.contains(element))
+      )
+        break;
+      textBeforeControl += ` ${child.textContent ?? ''}`;
+    }
+    return sanitizeBoundedText(textBeforeControl) ?? null;
   }
   const labelledBy = element.getAttribute('aria-labelledby');
   if (labelledBy) {
@@ -96,11 +113,14 @@ function inputEvent(
         semanticInputToken: classifyFiles(files),
       });
     }
-    const semanticInputToken = sanitizeInputElement(element);
+    const label = associatedLabel(element);
+    const semanticInputToken = sanitizeInputElement(element, {
+      label,
+    });
     if (!semanticInputToken) return null;
     return createSanitizedEvent(rawUrl, {
       actionType: 'input',
-      elementLabel: associatedLabel(element),
+      elementLabel: label,
       elementRole: elementRole(element),
       pageLandmark: pageLandmark(element),
       semanticInputToken,

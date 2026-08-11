@@ -72,5 +72,19 @@ describe('approved browser scope', () => {
         'https://APP.example.test/orders/123456?customer=private#details',
       ),
     ).toEqual({ hostname: 'app.example.test', normalizedPath: '/orders/:id' });
+    expect(
+      normalizeBrowserUrl(
+        'https://app.example.test/invoices/INV-1042/vendors/ACME-42',
+      ),
+    ).toEqual({
+      hostname: 'app.example.test',
+      normalizedPath: '/invoices/:id/vendors/:id',
+    });
+    expect(
+      normalizeBrowserUrl('https://app.example.test/purchase-orders'),
+    ).toEqual({
+      hostname: 'app.example.test',
+      normalizedPath: '/purchase-orders',
+    });
   });
 });

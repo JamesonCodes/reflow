@@ -258,10 +258,14 @@ async function retryDeliveryOrRecovery() {
   else await flushQueue();
 }
 
-async function recordTabScope(tabId: number) {
+async function recordTabScope(
+  tabId: number,
+  trigger: 'activated' | 'url_changed',
+) {
   const tab = await browser.tabs.get(tabId);
   if (tab.incognito || !tab.url) return;
-  await enqueueTabScopeEvent(tabId, tab.url);
+  if (trigger === 'url_changed' && !tab.active) return;
+  await enqueueTabScopeEvent(tabId, tab.url, trigger);
   await flushQueue();
 }
 
@@ -331,10 +335,10 @@ export default defineBackground(() => {
     return true;
   });
   browser.tabs.onActivated.addListener(({ tabId }) => {
-    void recordTabScope(tabId);
+    void recordTabScope(tabId, 'activated');
   });
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.url) void recordTabScope(tabId);
+    if (changeInfo.url) void recordTabScope(tabId, 'url_changed');
   });
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === retryAlarmName) void retryDeliveryOrRecovery();

@@ -10,6 +10,7 @@ const phonePattern = /(?:\+?\d[\d ().-]{5,}\d)/g;
 const paymentCardPattern = /(?:\d[ -]?){13,19}/g;
 const governmentIdPattern = /\b\d{3}-?\d{2}-?\d{4}\b/g;
 const urlPattern = /https?:\/\/\S+/gi;
+const recordIdentifierPattern = /\b[A-Z][A-Z0-9]{1,31}[-_]\d{2,}\b/gi;
 
 export const sentinelPiiValues = [
   'alex.person@example.com',
@@ -26,6 +27,7 @@ export function sanitizeBoundedText(rawText: string | null | undefined) {
     .replace(governmentIdPattern, '[GOVERNMENT_ID]')
     .replace(paymentCardPattern, '[PAYMENT_CARD]')
     .replace(phonePattern, '[PHONE]')
+    .replace(recordIdentifierPattern, '[RECORD_ID]')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 160);
@@ -35,37 +37,96 @@ export function sanitizeBoundedText(rawText: string | null | undefined) {
 export function classifyInputValue(
   value: string,
   inputType: string,
+  context: InputClassificationContext = {},
 ): string | null {
+  const normalizedType = inputType.toLowerCase();
+  const fieldHint = [
+    context.autocomplete,
+    context.inputMode,
+    context.label,
+    context.name,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(' ')
+    .toLowerCase();
+
   if (!value) return '[EMPTY]';
   if (
-    inputType === 'email' ||
+    normalizedType === 'email' ||
+    /\b(?:e-?mail)\b/.test(fieldHint) ||
     /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value)
   )
     return '[EMAIL]';
-  if (inputType === 'tel' || /(?:\+?\d[\d ().-]{5,}\d)/.test(value))
-    return '[PHONE]';
-  if (/(?:\d[ -]?){13,19}/.test(value)) return '[PAYMENT_CARD]';
-  if (/\b\d{3}-?\d{2}-?\d{4}\b/.test(value)) return '[GOVERNMENT_ID]';
-  if (inputType === 'date' || inputType === 'datetime-local') return '[DATE]';
-  if (inputType === 'number' || /^[-+]?\d+(?:[.,]\d+)?$/.test(value))
+  if (
+    normalizedType === 'date' ||
+    normalizedType === 'datetime-local' ||
+    normalizedType === 'month' ||
+    normalizedType === 'time' ||
+    /\bdate\b/.test(fieldHint)
+  )
+    return '[DATE]';
+  if (
+    /\b(?:tax|government|national|social security|ssn|ein)\b/.test(fieldHint) ||
+    /\b\d{3}-?\d{2}-?\d{4}\b/.test(value)
+  )
+    return '[GOVERNMENT_ID]';
+  if (
+    /\b(?:account|card|iban|routing)\b/.test(fieldHint) ||
+    /(?:\d[ -]?){13,19}/.test(value)
+  )
+    return '[PAYMENT_CARD]';
+  if (
+    /\b(?:amount|balance|cost|currency|price|subtotal|total)\b/.test(
+      fieldHint,
+    ) ||
+    /[$€£¥]\s*\d/.test(value)
+  )
+    return '[NUMBER:CURRENCY]';
+  if (/\b(?:invoice|order|record)\s+(?:id|number|reference)\b/.test(fieldHint))
+    return '[RECORD_ID]';
+  if (normalizedType === 'number' || /^[-+]?\d+(?:[.,]\d+)?$/.test(value))
     return '[NUMBER]';
-  if (/[$€£¥]\s*\d/.test(value)) return '[NUMBER:CURRENCY]';
-  if (inputType === 'checkbox' || inputType === 'radio') return '[BOOLEAN]';
+  if (
+    normalizedType === 'tel' ||
+    /\b(?:mobile|phone|telephone)\b/.test(fieldHint) ||
+    /(?:\+?\d[\d ().-]{5,}\d)/.test(value)
+  )
+    return '[PHONE]';
+  if (normalizedType === 'checkbox' || normalizedType === 'radio')
+    return '[BOOLEAN]';
   if (value.length <= 40) return '[TEXT:SHORT]';
   if (value.length <= 200) return '[TEXT:MEDIUM]';
   return '[TEXT:LONG]';
 }
 
 export interface InputElementLike {
+  autocomplete?: string;
+  inputMode?: string;
+  name?: string;
   type: string;
   value: string;
 }
 
-export function sanitizeInputElement(element: InputElementLike) {
+export interface InputClassificationContext {
+  autocomplete?: string | null;
+  inputMode?: string | null;
+  label?: string | null;
+  name?: string | null;
+}
+
+export function sanitizeInputElement(
+  element: InputElementLike,
+  context: InputClassificationContext = {},
+) {
   const normalizedType = element.type.toLowerCase();
   // This branch must execute before the value getter is touched.
   if (normalizedType === 'password') return null;
-  return classifyInputValue(element.value, normalizedType);
+  return classifyInputValue(element.value, normalizedType, {
+    autocomplete: context.autocomplete ?? element.autocomplete ?? null,
+    inputMode: context.inputMode ?? element.inputMode ?? null,
+    label: context.label ?? null,
+    name: context.name ?? element.name ?? null,
+  });
 }
 
 export interface GeneralizedFile {

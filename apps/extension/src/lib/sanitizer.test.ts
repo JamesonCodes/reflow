@@ -37,6 +37,32 @@ describe('content-script sanitization', () => {
     expect(classifyFiles([file])).toBe('[FILE:PDF_MEDIUM]');
   });
 
+  it('uses field intent before generic numeric pattern matching', () => {
+    expect(
+      classifyInputValue('2840.00', 'text', {
+        inputMode: 'decimal',
+        label: 'Payment amount',
+      }),
+    ).toBe('[NUMBER:CURRENCY]');
+    expect(classifyInputValue('2026-08-11', 'date')).toBe('[DATE]');
+    expect(
+      classifyInputValue('123-45-6789', 'text', {
+        label: 'Tax identifier',
+      }),
+    ).toBe('[GOVERNMENT_ID]');
+    expect(
+      classifyInputValue('4111 1111 1111 1111', 'text', {
+        label: 'Test account or card value',
+      }),
+    ).toBe('[PAYMENT_CARD]');
+  });
+
+  it('redacts record identifiers from bounded DOM text', () => {
+    expect(sanitizeBoundedText('Open vendor ACME-42 for INV-1042')).toBe(
+      'Open vendor [RECORD_ID] for [RECORD_ID]',
+    );
+  });
+
   it('removes query strings, fragments, and PII from captured URLs', () => {
     const event = createSanitizedEvent(
       'https://billing.example.test/users/alex.person@example.com?token=secret#card',

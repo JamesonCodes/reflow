@@ -11,6 +11,7 @@ export interface PrivacyExclusionRule {
 
 const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 const identifierPattern = /^(?:\d{4,}|[0-9a-f]{8}-[0-9a-f-]{27,})$/i;
+const businessIdentifierPattern = /^[a-z][a-z0-9]{1,31}[-_]\d{2,}$/i;
 const secretLikePattern = /^[A-Za-z0-9_-]{24,}$/;
 
 export function hostnameMatches(rule: DomainRule, hostname: string) {
@@ -32,7 +33,11 @@ function sanitizePathSegment(segment: string) {
   }
 
   if (emailPattern.test(decoded)) return ':email';
-  if (identifierPattern.test(decoded)) return ':id';
+  if (
+    identifierPattern.test(decoded) ||
+    businessIdentifierPattern.test(decoded)
+  )
+    return ':id';
   if (secretLikePattern.test(decoded)) return ':token';
   if (/(?:\d[ -]?){7,}/.test(decoded)) return ':redacted';
   return segment.slice(0, 80);

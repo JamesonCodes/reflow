@@ -4,6 +4,7 @@ import type { ActiveObservationState, StoredQueueItem } from './model';
 
 const installationKey = 'reflow.installation-id';
 const observationKey = 'reflow.active-observation';
+const openObservationWindowKey = 'reflow.open-observation-window';
 const queueKey = 'reflow.sanitized-queue';
 const deliveryErrorKey = 'reflow.delivery-error';
 
@@ -40,6 +41,21 @@ export async function setObservationState(state: ActiveObservationState) {
 
 export async function clearObservationState() {
   await browser.storage.session.remove(observationKey);
+}
+
+export async function getOpenObservationWindowId() {
+  const result = await browser.storage.local.get(openObservationWindowKey);
+  return typeof result[openObservationWindowKey] === 'string'
+    ? result[openObservationWindowKey]
+    : null;
+}
+
+export async function setOpenObservationWindowId(windowId: string | null) {
+  if (windowId) {
+    await browser.storage.local.set({ [openObservationWindowKey]: windowId });
+  } else {
+    await browser.storage.local.remove(openObservationWindowKey);
+  }
 }
 
 export async function getQueue() {

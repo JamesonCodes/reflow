@@ -5,6 +5,7 @@ import {
 } from '@reflow/contracts';
 
 import { isObservableUrl, normalizeBrowserUrl } from './scope';
+import { createOutOfScopeGap, createSanitizedEvent } from './sanitizer';
 import {
   getDeliveryError,
   getObservationState,
@@ -27,6 +28,9 @@ export interface TrustedQueueContext {
   workspaceId: string;
 }
 
+export const rawEventConflictTarget =
+  'observation_window_id,sequence_no' as const;
+
 function serialize<T>(operation: () => Promise<T>) {
   const next = mutation.then(operation, operation);
   mutation = next.then(
@@ -41,44 +45,81 @@ export function enqueueCapturedEvent(
   chromeTabId: number,
   senderUrl: string,
 ) {
+  return serialize(() =>
+    enqueueCapturedEventInternal(input, chromeTabId, senderUrl),
+  );
+}
+
+async function enqueueCapturedEventInternal(
+  input: SanitizedCapturedEvent,
+  chromeTabId: number,
+  senderUrl: string,
+  existingState?: Awaited<ReturnType<typeof getObservationState>>,
+) {
+  const parsed = sanitizedCapturedEventSchema.safeParse(input);
+  if (!parsed.success) return false;
+  const state = existingState ?? (await getObservationState());
+  if (!state || state.status !== 'active') return false;
+
+  if (parsed.data.actionType !== 'out_of_scope_gap') {
+    if (!isObservableUrl(senderUrl, state.domains, state.exclusions))
+      return false;
+    const senderLocation = normalizeBrowserUrl(senderUrl);
+    if (
+      senderLocation.hostname !== parsed.data.hostname ||
+      senderLocation.normalizedPath !== parsed.data.normalizedPath
+    )
+      return false;
+  }
+
+  const tabKey = String(chromeTabId);
+  const localTabId = state.tabIds[tabKey] ?? state.nextTabId;
+  if (!(tabKey in state.tabIds)) {
+    state.tabIds[tabKey] = localTabId;
+    state.nextTabId += 1;
+  }
+
+  const queuedEvent = buildQueuedEvent(parsed.data, {
+    localTabId,
+    observationWindowId: state.windowId,
+    observerId: state.observerId,
+    sequenceNo: state.nextSequence,
+    workspaceId: state.workspaceId,
+  });
+  state.nextSequence += 1;
+  await setObservationState(state);
+
+  const queue = await getQueue();
+  queue.push({ attempts: 0, event: queuedEvent, nextAttemptAt: 0 });
+  await setQueue(queue.slice(-maximumQueueSize));
+  return true;
+}
+
+export function enqueueTabScopeEvent(chromeTabId: number, tabUrl: string) {
   return serialize(async () => {
-    const parsed = sanitizedCapturedEventSchema.safeParse(input);
-    if (!parsed.success) return false;
     const state = await getObservationState();
     if (!state || state.status !== 'active') return false;
 
-    if (parsed.data.actionType !== 'out_of_scope_gap') {
-      if (!isObservableUrl(senderUrl, state.domains, state.exclusions))
-        return false;
-      const senderLocation = normalizeBrowserUrl(senderUrl);
-      if (
-        senderLocation.hostname !== parsed.data.hostname ||
-        senderLocation.normalizedPath !== parsed.data.normalizedPath
-      )
-        return false;
+    let event: SanitizedCapturedEvent;
+    if (isObservableUrl(tabUrl, state.domains, state.exclusions)) {
+      const location = normalizeBrowserUrl(tabUrl);
+      const actionType =
+        state.lastScope === 'approved' &&
+        state.lastHostname !== null &&
+        state.lastHostname !== location.hostname
+          ? 'domain_transition'
+          : 'tab_activate';
+      state.lastScope = 'approved';
+      state.lastHostname = location.hostname;
+      event = createSanitizedEvent(tabUrl, { actionType });
+    } else {
+      if (state.lastScope === 'gap') return false;
+      state.lastScope = 'gap';
+      state.lastHostname = null;
+      event = createOutOfScopeGap();
     }
 
-    const tabKey = String(chromeTabId);
-    const localTabId = state.tabIds[tabKey] ?? state.nextTabId;
-    if (!(tabKey in state.tabIds)) {
-      state.tabIds[tabKey] = localTabId;
-      state.nextTabId += 1;
-    }
-
-    const queuedEvent = buildQueuedEvent(parsed.data, {
-      localTabId,
-      observationWindowId: state.windowId,
-      observerId: state.observerId,
-      sequenceNo: state.nextSequence,
-      workspaceId: state.workspaceId,
-    });
-    state.nextSequence += 1;
-    await setObservationState(state);
-
-    const queue = await getQueue();
-    queue.push({ attempts: 0, event: queuedEvent, nextAttemptAt: 0 });
-    await setQueue(queue.slice(-maximumQueueSize));
-    return true;
+    return enqueueCapturedEventInternal(event, chromeTabId, tabUrl, state);
   });
 }
 
@@ -120,40 +161,84 @@ export function toDatabaseRow(
   };
 }
 
-export function flushQueue() {
-  return serialize(async () => {
-    const queue = await getQueue();
-    const now = Date.now();
-    const due = queue
-      .filter((item) => item.nextAttemptAt <= now)
-      .slice(0, batchSize);
-    if (due.length === 0) return 0;
+async function flushQueueInternal() {
+  const queue = await getQueue();
+  const now = Date.now();
+  const due = queue
+    .filter((item) => item.nextAttemptAt <= now)
+    .slice(0, batchSize);
+  if (due.length === 0) return 0;
 
-    const { error } = await getSupabaseClient()
-      .from('raw_event_tokens')
-      .upsert(due.map(toDatabaseRow), {
-        ignoreDuplicates: true,
-        onConflict: 'id',
-      });
-    const dueIds = new Set(due.map((item) => item.event.id));
-    if (!error) {
-      await setQueue(queue.filter((item) => !dueIds.has(item.event.id)));
-      await setDeliveryError(null);
-      return due.length;
-    }
-
-    const retried = queue.map((item) => {
-      if (!dueIds.has(item.event.id)) return item;
-      const attempts = item.attempts + 1;
-      return {
-        ...item,
-        attempts,
-        nextAttemptAt: now + Math.min(60_000, 2 ** attempts * 1000),
-      };
+  const { error } = await getSupabaseClient()
+    .from('raw_event_tokens')
+    .upsert(due.map(toDatabaseRow), {
+      ignoreDuplicates: true,
+      onConflict: rawEventConflictTarget,
     });
-    await setQueue(retried);
-    await setDeliveryError('delivery_failed');
-    return 0;
+  const dueIds = new Set(due.map((item) => item.event.id));
+  if (!error) {
+    await setQueue(queue.filter((item) => !dueIds.has(item.event.id)));
+    await setDeliveryError(null);
+    return due.length;
+  }
+
+  const retried = queue.map((item) => {
+    if (!dueIds.has(item.event.id)) return item;
+    const attempts = item.attempts + 1;
+    return {
+      ...item,
+      attempts,
+      nextAttemptAt: now + Math.min(60_000, 2 ** attempts * 1000),
+    };
+  });
+  await setQueue(retried);
+  await setDeliveryError('delivery_failed');
+  return 0;
+}
+
+export function flushQueue() {
+  return serialize(flushQueueInternal);
+}
+
+async function drainQueueInternal() {
+  const queued = await getQueue();
+  await setQueue(
+    queued.map((item) => ({
+      ...item,
+      nextAttemptAt: 0,
+    })),
+  );
+
+  let previousSize = Number.POSITIVE_INFINITY;
+  while (true) {
+    const currentSize = (await getQueue()).length;
+    if (currentSize === 0) return true;
+    if (currentSize >= previousSize) return false;
+    previousSize = currentSize;
+    await flushQueueInternal();
+  }
+}
+
+export function drainQueueAndRun(operation: () => Promise<void>) {
+  return serialize(async () => {
+    if (!(await drainQueueInternal())) return false;
+    await operation();
+    return true;
+  });
+}
+
+export function drainInterruptedQueue() {
+  return serialize(async () => {
+    const windowIds = [
+      ...new Set(
+        (await getQueue()).map((item) => item.event.observationWindowId),
+      ),
+    ];
+    const drained = await drainQueueInternal();
+    return {
+      drained,
+      windowIds,
+    };
   });
 }
 

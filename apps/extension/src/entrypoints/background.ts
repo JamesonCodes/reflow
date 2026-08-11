@@ -8,16 +8,20 @@ import type {
   ObserverDefaults,
   PopupSnapshot,
 } from '../lib/model';
-import { enqueueCapturedEvent, flushQueue, queueStatus } from '../lib/queue';
 import {
-  domainPermissionPatterns,
-  isObservableUrl,
-  normalizeBrowserUrl,
-} from '../lib/scope';
-import { createOutOfScopeGap, createSanitizedEvent } from '../lib/sanitizer';
+  drainInterruptedQueue,
+  drainQueueAndRun,
+  enqueueCapturedEvent,
+  enqueueTabScopeEvent,
+  flushQueue,
+  queueStatus,
+} from '../lib/queue';
+import { domainPermissionPatterns, isObservableUrl } from '../lib/scope';
 import {
   clearObservationState,
+  getOpenObservationWindowId,
   getObservationState,
+  setOpenObservationWindowId,
   setObservationState,
 } from '../lib/storage';
 import {
@@ -165,11 +169,13 @@ async function startRecording(defaults: ObserverDefaults) {
     throw new Error('approved_active_tab_required');
   }
   try {
+    await setOpenObservationWindowId(state.windowId);
     await setObservationState(state);
     await registerObserverScript(state);
     await setBadge('active');
   } catch (error) {
     await clearObservationState();
+    await setOpenObservationWindowId(null);
     await transitionObservation(state.windowId, 'cancelled');
     throw error;
   }
@@ -179,59 +185,83 @@ async function transitionRecording(status: 'active' | 'paused' | 'completed') {
   const state = await getObservationState();
   if (!state) throw new Error('observation_not_active');
 
-  // The database accepts events only while the window is active. Drain the
-  // sanitized queue before pausing or completing so retries never target a
-  // closed window.
   if (status !== 'active') {
-    await flushQueue();
-    if ((await queueStatus()).queueSize > 0)
-      throw new Error('events_pending_delivery');
+    // Block new sequence allocation while draining and closing the server-side
+    // window. Events cannot race into the queue after the final flush.
+    const drained = await drainQueueAndRun(async () => {
+      await transitionObservation(state.windowId, status);
+      if (status === 'completed') {
+        await clearObservationState();
+        await setOpenObservationWindowId(null);
+      } else {
+        state.status = status;
+        await setObservationState(state);
+      }
+    });
+    if (!drained) throw new Error('events_pending_delivery');
+  } else {
+    await transitionObservation(state.windowId, status);
+    state.status = status;
+    await setObservationState(state);
   }
-  await transitionObservation(state.windowId, status);
 
   if (status === 'completed') {
-    await clearObservationState();
     await unregisterObserverScript();
     await notifyContentScripts(null);
     await setBadge('off');
     return;
   }
 
-  state.status = status;
-  await setObservationState(state);
   if (status === 'active') await registerObserverScript(state);
   await notifyContentScripts(state);
   await setBadge(status);
 }
 
-async function recordTabScope(tabId: number) {
+async function closeInterruptedObservation() {
   const state = await getObservationState();
-  if (!state || state.status !== 'active') return;
+  const markerWindowId = await getOpenObservationWindowId();
+
+  // Browser or extension restarts must never silently resume recording. Stop
+  // capture first, then deliver only the already-sanitized local queue.
+  await unregisterObserverScript();
+  await clearObservationState();
+  await notifyContentScripts(null);
+  await setBadge('off');
+
+  const result = await drainInterruptedQueue();
+  const windowIds = [
+    ...new Set(
+      [state?.windowId, markerWindowId, ...result.windowIds].filter(
+        (windowId): windowId is string => Boolean(windowId),
+      ),
+    ),
+  ];
+  if (!result.drained) {
+    await setOpenObservationWindowId(windowIds[0] ?? null);
+    return;
+  }
+
+  try {
+    await Promise.all(
+      windowIds.map((windowId) => transitionObservation(windowId, 'completed')),
+    );
+    await setOpenObservationWindowId(null);
+  } catch {
+    // Keep the durable marker so the retry alarm can finish the close later.
+  }
+}
+
+async function retryDeliveryOrRecovery() {
+  if (await getObservationState()) await flushQueue();
+  else if (await getOpenObservationWindowId())
+    await closeInterruptedObservation();
+  else await flushQueue();
+}
+
+async function recordTabScope(tabId: number) {
   const tab = await browser.tabs.get(tabId);
   if (tab.incognito || !tab.url) return;
-
-  if (isObservableUrl(tab.url, state.domains, state.exclusions)) {
-    const location = normalizeBrowserUrl(tab.url);
-    const actionType =
-      state.lastScope === 'approved' &&
-      state.lastHostname !== null &&
-      state.lastHostname !== location.hostname
-        ? 'domain_transition'
-        : 'tab_activate';
-    state.lastScope = 'approved';
-    state.lastHostname = location.hostname;
-    await setObservationState(state);
-    await enqueueCapturedEvent(
-      createSanitizedEvent(tab.url, { actionType }),
-      tabId,
-      tab.url,
-    );
-  } else if (state.lastScope !== 'gap') {
-    state.lastScope = 'gap';
-    state.lastHostname = null;
-    await setObservationState(state);
-    await enqueueCapturedEvent(createOutOfScopeGap(), tabId, tab.url);
-  }
+  await enqueueTabScopeEvent(tabId, tab.url);
   await flushQueue();
 }
 
@@ -307,17 +337,13 @@ export default defineBackground(() => {
     if (changeInfo.url) void recordTabScope(tabId);
   });
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === retryAlarmName) void flushQueue();
+    if (alarm.name === retryAlarmName) void retryDeliveryOrRecovery();
   });
   browser.runtime.onStartup.addListener(() => {
-    void clearObservationState();
-    void unregisterObserverScript();
-    void setBadge('off');
+    void closeInterruptedObservation();
   });
   browser.runtime.onInstalled.addListener(() => {
-    void clearObservationState();
-    void unregisterObserverScript();
-    void setBadge('off');
+    void closeInterruptedObservation();
   });
   void browser.alarms.create(retryAlarmName, { periodInMinutes: 1 });
   void flushQueue();

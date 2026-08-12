@@ -8,6 +8,12 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@reflow/contracts": "workspace:*",
+    "ai": "7.0.62",
+    "zod": "4.1.8"
   }
 }

@@ -36,9 +36,19 @@ Reflow does not run a local Supabase stack.
 The Next.js application runs on localhost and provides context setup, process
 analysis, and human approval. Its trusted operations remain server-side.
 
-The Node worker runs locally, claims durable jobs from Supabase, and performs
-trace normalization, task inference, process mining, and redesign. Model calls
-pass through the shared AI Gateway package.
+The Node worker runs locally and atomically claims durable jobs from Supabase.
+Abandoned locks become reclaimable after ten minutes so a worker restart does
+not strand an observation. Phase 4 deterministically orders and collapses raw
+events, records source-event evidence for every normalized step, and splits hard
+activity segments after five minutes of inactivity. Shorter pauses, navigation,
+tab changes, and cross-domain transitions remain model-visible boundary hints.
+
+Task inference calls use structured output through the shared Vercel AI Gateway
+package. Model output is validated before a single transactional database call
+persists the inference run, bounded tasks, evidence links, and deterministic
+task clusters. Stable digests and identifiers make retries idempotent. Analyst
+corrections are separate immutable overlays rather than edits to original model
+evidence.
 
 Reflow begins without document ingestion or vector search. Task inference is
 grounded in sanitized browser traces; embeddings will be introduced only if

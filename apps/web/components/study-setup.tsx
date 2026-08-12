@@ -20,6 +20,7 @@ import {
 } from 'react';
 
 import { getSupabaseBrowserClient } from '../lib/supabase-browser';
+import { TaskAnalysisPanel } from './task-analysis';
 
 type Supabase = NonNullable<ReturnType<typeof getSupabaseBrowserClient>>;
 type Workspace = Tables<'workspaces'>;
@@ -623,6 +624,7 @@ function AdminWorkspace({
           <a href="#departments">Departments & roles</a>
           <a href="#domains">Browser scope</a>
           <a href="#invites">Observer invites</a>
+          <a href="#task-analysis">Inferred tasks</a>
         </nav>
         <div className="sidebar-note">
           <strong>Discovery, not prescription</strong>
@@ -1025,6 +1027,7 @@ function AdminWorkspace({
             ))}
           </div>
         </section>
+        <TaskAnalysisPanel supabase={supabase} workspaceId={workspace.id} />
       </div>
     </main>
   );

@@ -557,6 +557,71 @@ select:hover {
   margin-top: 1rem;
 }
 
+.analysis-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.task-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.task-card {
+  align-items: flex-start;
+  background: #f7f9f6;
+  border: 1px solid #e1e7e0;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.task-card > span,
+.task-card > span > span,
+.task-card small {
+  display: block;
+}
+
+.task-card > span > span,
+.task-card small,
+.muted-copy {
+  color: #6d7971;
+}
+
+.task-card small {
+  margin-top: 0.35rem;
+}
+
+.correction-panel {
+  border-top: 1px solid #e1e7e0;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.correction-fields {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .analysis-grid,
+  .correction-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 .list-row {
   align-items: center;
   border-top: 1px solid #edf0ed;

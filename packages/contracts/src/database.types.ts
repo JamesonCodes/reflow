@@ -14,6 +14,63 @@ export type Database = {
   };
   public: {
     Tables: {
+      activity_segments: {
+        Row: {
+          boundary_reason: string;
+          created_at: string;
+          end_step_ordinal: number;
+          ended_at: string;
+          id: string;
+          normalization_version: number;
+          observation_window_id: string;
+          segment_ordinal: number;
+          start_step_ordinal: number;
+          started_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          boundary_reason: string;
+          created_at?: string;
+          end_step_ordinal: number;
+          ended_at: string;
+          id: string;
+          normalization_version: number;
+          observation_window_id: string;
+          segment_ordinal: number;
+          start_step_ordinal: number;
+          started_at: string;
+          workspace_id: string;
+        };
+        Update: {
+          boundary_reason?: string;
+          created_at?: string;
+          end_step_ordinal?: number;
+          ended_at?: string;
+          id?: string;
+          normalization_version?: number;
+          observation_window_id?: string;
+          segment_ordinal?: number;
+          start_step_ordinal?: number;
+          started_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'activity_segments_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'activity_segments_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       allowed_domains: {
         Row: {
           created_at: string;
@@ -125,6 +182,126 @@ export type Database = {
           },
           {
             foreignKeyName: 'job_roles_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      normalized_step_events: {
+        Row: {
+          created_at: string;
+          normalized_step_id: string;
+          raw_event_id: string;
+          source_position: number;
+        };
+        Insert: {
+          created_at?: string;
+          normalized_step_id: string;
+          raw_event_id: string;
+          source_position: number;
+        };
+        Update: {
+          created_at?: string;
+          normalized_step_id?: string;
+          raw_event_id?: string;
+          source_position?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'normalized_step_events_normalized_step_id_fkey';
+            columns: ['normalized_step_id'];
+            isOneToOne: false;
+            referencedRelation: 'normalized_steps';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'normalized_step_events_raw_event_id_fkey';
+            columns: ['raw_event_id'];
+            isOneToOne: false;
+            referencedRelation: 'raw_event_tokens';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      normalized_steps: {
+        Row: {
+          action_type: string;
+          boundary_reasons: string[];
+          candidate_boundary_before: boolean;
+          created_at: string;
+          element_label: string | null;
+          element_role: string | null;
+          ended_at: string;
+          hostname: string | null;
+          id: string;
+          normalization_version: number;
+          normalized_path: string | null;
+          observation_window_id: string;
+          page_landmark: string | null;
+          semantic_input_token: string | null;
+          source_event_count: number;
+          started_at: string;
+          step_key: string;
+          step_ordinal: number;
+          tab_id: number;
+          workspace_id: string;
+        };
+        Insert: {
+          action_type: string;
+          boundary_reasons?: string[];
+          candidate_boundary_before?: boolean;
+          created_at?: string;
+          element_label?: string | null;
+          element_role?: string | null;
+          ended_at: string;
+          hostname?: string | null;
+          id: string;
+          normalization_version: number;
+          normalized_path?: string | null;
+          observation_window_id: string;
+          page_landmark?: string | null;
+          semantic_input_token?: string | null;
+          source_event_count: number;
+          started_at: string;
+          step_key: string;
+          step_ordinal: number;
+          tab_id: number;
+          workspace_id: string;
+        };
+        Update: {
+          action_type?: string;
+          boundary_reasons?: string[];
+          candidate_boundary_before?: boolean;
+          created_at?: string;
+          element_label?: string | null;
+          element_role?: string | null;
+          ended_at?: string;
+          hostname?: string | null;
+          id?: string;
+          normalization_version?: number;
+          normalized_path?: string | null;
+          observation_window_id?: string;
+          page_landmark?: string | null;
+          semantic_input_token?: string | null;
+          source_event_count?: number;
+          started_at?: string;
+          step_key?: string;
+          step_ordinal?: number;
+          tab_id?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'normalized_steps_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'normalized_steps_workspace_id_fkey';
             columns: ['workspace_id'];
             isOneToOne: false;
             referencedRelation: 'workspaces';
@@ -489,6 +666,314 @@ export type Database = {
           },
         ];
       };
+      task_cluster_members: {
+        Row: {
+          cluster_id: string;
+          created_at: string;
+          task_instance_id: string;
+        };
+        Insert: {
+          cluster_id: string;
+          created_at?: string;
+          task_instance_id: string;
+        };
+        Update: {
+          cluster_id?: string;
+          created_at?: string;
+          task_instance_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_cluster_members_cluster_id_fkey';
+            columns: ['cluster_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_clusters';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_cluster_members_task_instance_id_fkey';
+            columns: ['task_instance_id'];
+            isOneToOne: true;
+            referencedRelation: 'task_instances';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      task_clusters: {
+        Row: {
+          canonical_label: string;
+          cluster_key: string;
+          created_at: string;
+          id: string;
+          participating_systems: string[];
+          updated_at: string;
+          workspace_id: string;
+        };
+        Insert: {
+          canonical_label: string;
+          cluster_key: string;
+          created_at?: string;
+          id: string;
+          participating_systems: string[];
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          canonical_label?: string;
+          cluster_key?: string;
+          created_at?: string;
+          id?: string;
+          participating_systems?: string[];
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_clusters_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      task_correction_sources: {
+        Row: {
+          correction_id: string;
+          source_position: number;
+          task_instance_id: string;
+        };
+        Insert: {
+          correction_id: string;
+          source_position: number;
+          task_instance_id: string;
+        };
+        Update: {
+          correction_id?: string;
+          source_position?: number;
+          task_instance_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_correction_sources_correction_id_fkey';
+            columns: ['correction_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_corrections';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_correction_sources_task_instance_id_fkey';
+            columns: ['task_instance_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_instances';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      task_corrections: {
+        Row: {
+          correction_type: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          reason: string | null;
+          replacement_labels: string[];
+          split_after_step_ordinal: number | null;
+          workspace_id: string;
+        };
+        Insert: {
+          correction_type: string;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          reason?: string | null;
+          replacement_labels?: string[];
+          split_after_step_ordinal?: number | null;
+          workspace_id: string;
+        };
+        Update: {
+          correction_type?: string;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          reason?: string | null;
+          replacement_labels?: string[];
+          split_after_step_ordinal?: number | null;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_corrections_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      task_inference_runs: {
+        Row: {
+          created_at: string;
+          id: string;
+          input_digest: string;
+          model: string;
+          normalization_version: number;
+          observation_window_id: string;
+          prompt_version: number;
+          task_count: number;
+          workspace_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id: string;
+          input_digest: string;
+          model: string;
+          normalization_version: number;
+          observation_window_id: string;
+          prompt_version: number;
+          task_count: number;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          input_digest?: string;
+          model?: string;
+          normalization_version?: number;
+          observation_window_id?: string;
+          prompt_version?: number;
+          task_count?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_inference_runs_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'task_inference_runs_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      task_instance_steps: {
+        Row: {
+          created_at: string;
+          normalized_step_id: string;
+          step_position: number;
+          task_instance_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          normalized_step_id: string;
+          step_position: number;
+          task_instance_id: string;
+        };
+        Update: {
+          created_at?: string;
+          normalized_step_id?: string;
+          step_position?: number;
+          task_instance_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_instance_steps_normalized_step_id_fkey';
+            columns: ['normalized_step_id'];
+            isOneToOne: false;
+            referencedRelation: 'normalized_steps';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_instance_steps_task_instance_id_fkey';
+            columns: ['task_instance_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_instances';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      task_instances: {
+        Row: {
+          apparent_objective: string;
+          boundary_rationale: string;
+          confidence: number;
+          created_at: string;
+          end_step_ordinal: number;
+          ended_at: string;
+          id: string;
+          inference_run_id: string;
+          neutral_label: string;
+          observation_window_id: string;
+          participating_systems: string[];
+          start_step_ordinal: number;
+          started_at: string;
+          task_ordinal: number;
+          workspace_id: string;
+        };
+        Insert: {
+          apparent_objective: string;
+          boundary_rationale: string;
+          confidence: number;
+          created_at?: string;
+          end_step_ordinal: number;
+          ended_at: string;
+          id: string;
+          inference_run_id: string;
+          neutral_label: string;
+          observation_window_id: string;
+          participating_systems: string[];
+          start_step_ordinal: number;
+          started_at: string;
+          task_ordinal: number;
+          workspace_id: string;
+        };
+        Update: {
+          apparent_objective?: string;
+          boundary_rationale?: string;
+          confidence?: number;
+          created_at?: string;
+          end_step_ordinal?: number;
+          ended_at?: string;
+          id?: string;
+          inference_run_id?: string;
+          neutral_label?: string;
+          observation_window_id?: string;
+          participating_systems?: string[];
+          start_step_ordinal?: number;
+          started_at?: string;
+          task_ordinal?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_instances_inference_run_id_fkey';
+            columns: ['inference_run_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_inference_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_instances_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'task_instances_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       workspace_invites: {
         Row: {
           code_hash: string;
@@ -627,6 +1112,58 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      complete_processing_job: {
+        Args: { target_job_id: number; target_lock_token: string };
+        Returns: {
+          attempt_count: number;
+          available_at: string;
+          created_at: string;
+          entity_id: string;
+          error_code: string | null;
+          error_detail: string | null;
+          id: number;
+          job_type: string;
+          lock_token: string | null;
+          locked_at: string | null;
+          locked_by: string | null;
+          max_attempts: number;
+          status: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'processing_jobs';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      create_task_correction: {
+        Args: {
+          target_correction_type: string;
+          target_reason?: string;
+          target_replacement_labels?: string[];
+          target_split_after_step_ordinal?: number;
+          target_task_instance_ids: string[];
+          target_workspace_id: string;
+        };
+        Returns: {
+          correction_type: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          reason: string | null;
+          replacement_labels: string[];
+          split_after_step_ordinal: number | null;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'task_corrections';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_workspace: {
         Args: { workspace_name: string };
         Returns: {
@@ -654,6 +1191,64 @@ export type Database = {
           invite_id: string;
         }[];
       };
+      enqueue_task_inference: {
+        Args: { target_observation_window_id: string };
+        Returns: {
+          attempt_count: number;
+          available_at: string;
+          created_at: string;
+          entity_id: string;
+          error_code: string | null;
+          error_detail: string | null;
+          id: number;
+          job_type: string;
+          lock_token: string | null;
+          locked_at: string | null;
+          locked_by: string | null;
+          max_attempts: number;
+          status: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'processing_jobs';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      fail_processing_job: {
+        Args: {
+          retryable?: boolean;
+          target_error_code: string;
+          target_error_detail: string;
+          target_job_id: number;
+          target_lock_token: string;
+        };
+        Returns: {
+          attempt_count: number;
+          available_at: string;
+          created_at: string;
+          entity_id: string;
+          error_code: string | null;
+          error_detail: string | null;
+          id: number;
+          job_type: string;
+          lock_token: string | null;
+          locked_at: string | null;
+          locked_by: string | null;
+          max_attempts: number;
+          status: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'processing_jobs';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       join_workspace_by_invite: {
         Args: { installation_id: string; invite_code: string };
         Returns: {
@@ -666,6 +1261,36 @@ export type Database = {
         SetofOptions: {
           from: '*';
           to: 'workspaces';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      persist_task_inference_result: {
+        Args: {
+          target_input_digest: string;
+          target_model: string;
+          target_normalization_version: number;
+          target_observation_window_id: string;
+          target_prompt_version: number;
+          target_run_id: string;
+          target_segments: Json;
+          target_steps: Json;
+          target_tasks: Json;
+        };
+        Returns: {
+          created_at: string;
+          id: string;
+          input_digest: string;
+          model: string;
+          normalization_version: number;
+          observation_window_id: string;
+          prompt_version: number;
+          task_count: number;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'task_inference_runs';
           isOneToOne: true;
           isSetofReturn: false;
         };

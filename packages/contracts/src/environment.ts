@@ -10,10 +10,24 @@ export const adminEnvironmentSchema = browserEnvironmentSchema.extend({
   SUPABASE_SECRET_KEY: z.string().min(1),
 });
 
+export const workerEnvironmentSchema = z.object({
+  AI_GATEWAY_API_KEY: z.string().min(1),
+  NEXT_PUBLIC_SUPABASE_URL: z.url().startsWith('https://'),
+  REFLOW_TASK_INFERENCE_MODEL: z
+    .string()
+    .min(3)
+    .max(160)
+    .regex(/^[a-z0-9-]+\/[a-z0-9._-]+$/i),
+  SUPABASE_SECRET_KEY: z.string().min(1),
+});
+
 export const trustedEnvironmentSchema = adminEnvironmentSchema.extend({
   AI_GATEWAY_API_KEY: z.string().min(1),
+  REFLOW_TASK_INFERENCE_MODEL:
+    workerEnvironmentSchema.shape.REFLOW_TASK_INFERENCE_MODEL,
 });
 
 export type AdminEnvironment = z.infer<typeof adminEnvironmentSchema>;
 export type BrowserEnvironment = z.infer<typeof browserEnvironmentSchema>;
 export type TrustedEnvironment = z.infer<typeof trustedEnvironmentSchema>;
+export type WorkerEnvironment = z.infer<typeof workerEnvironmentSchema>;

@@ -12,8 +12,8 @@ application processes run locally; hosted Supabase provides authentication and
 durable data, while Vercel AI Gateway will provide a provider-neutral model
 boundary beginning with task inference.
 
-Reflow currently covers study setup and privacy-safe browser observation. Process
-inference, mining, redesign, and export are delivered incrementally through the
+Reflow currently covers study setup, privacy-safe browser observation, and
+evidence-backed browser task inference. Process mining, redesign, and export are delivered incrementally through the
 [project roadmap](docs/roadmap.md).
 
 ## Why Reflow
@@ -63,7 +63,7 @@ extension messaging, background memory, storage, logs, or Supabase requests.
 | 1     | Browser observation schema            | Complete |
 | 2     | Study setup and user guidance         | Complete |
 | 3     | Privacy-safe browser observer         | Complete |
-| 4     | Step normalization and task inference | Next     |
+| 4     | Step normalization and task inference | Complete |
 | 5     | As-Is process mining                  | Planned  |
 | 6     | Analysis and To-Be redesign           | Planned  |
 | 7     | Export and portfolio hardening        | Planned  |
@@ -137,6 +137,7 @@ WXT_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 SUPABASE_SECRET_KEY=your-secret-key
 REFLOW_ADMIN_EMAILS=you@example.com
 AI_GATEWAY_API_KEY=your-ai-gateway-key
+REFLOW_TASK_INFERENCE_MODEL=openai/gpt-5-mini
 ```
 
 The secret key and administrator allowlist are read only by trusted local
@@ -235,6 +236,19 @@ order by sequence_no;
 Sequence numbers should be continuous. The results should contain semantic
 tokens and normalized paths, never raw form values, passwords, filenames, query
 strings, or out-of-scope host details.
+
+## Infer browser tasks
+
+With `AI_GATEWAY_API_KEY`, `REFLOW_TASK_INFERENCE_MODEL`, and the trusted
+Supabase secret configured, keep `pnpm dev` running and return to the
+administrator dashboard. Open **Inferred tasks**, queue a completed observation,
+and refresh after the local worker finishes. Reflow shows neutral task labels,
+apparent objectives, participating browser systems, supporting step ranges, and
+confidence.
+
+Analysts can rename, merge, split, or reject inferred tasks. Corrections are
+stored as immutable overlays; the original model inference and its source-event
+evidence remain unchanged.
 
 ## Development commands
 

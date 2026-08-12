@@ -34,7 +34,7 @@ not added early unless the current phase requires a shared interface.
 | 1     | Browser observation schema            | Complete | `0b715e2`      |
 | 2     | Study setup and user guidance         | Complete | `26864f1`      |
 | 3     | Privacy-safe browser observer         | Complete | `5cf61d1`      |
-| 4     | Step normalization and task inference | Next     | —              |
+| 4     | Step normalization and task inference | Complete | —              |
 | 5     | As-Is process mining                  | Planned  | —              |
 | 6     | Analysis and To-Be redesign           | Planned  | —              |
 | 7     | Export and portfolio hardening        | Planned  | —              |
@@ -227,7 +227,7 @@ The Phase 3 hardening pass additionally:
 
 ## Phase 4 — Step normalization and task inference
 
-**Status:** Next
+**Status:** Complete
 
 ### Scope
 
@@ -242,7 +242,7 @@ Sanitized events
   -> recurring task clusters
 ```
 
-Deterministic preprocessing will:
+Deterministic preprocessing:
 
 - Order events by observation window and sequence.
 - Collapse identical consecutive actions within one second.
@@ -269,7 +269,7 @@ corrections remain separate from the original inference.
 - Reprocessing is idempotent.
 - Full workspace checks pass.
 
-### Planned commit
+### Delivery
 
 `feat: add browser task inference`
 

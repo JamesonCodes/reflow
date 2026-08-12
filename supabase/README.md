@@ -17,6 +17,8 @@ pnpm supabase db lint --linked --schema public --fail-on error
 pnpm supabase gen types --linked --schema public > packages/contracts/src/database.types.ts
 psql "$REFLOW_TEST_DATABASE_URL" --file supabase/tests/phase1.sql
 psql "$REFLOW_TEST_DATABASE_URL" --file supabase/tests/phase2.sql
+psql "$REFLOW_TEST_DATABASE_URL" --file supabase/tests/phase3.sql
+psql "$REFLOW_TEST_DATABASE_URL" --file supabase/tests/phase4.sql
 bash supabase/tests/concurrent-job-claims.sh
 ```
 

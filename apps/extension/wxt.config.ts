@@ -2,6 +2,12 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   srcDir: 'src',
+  dev: {
+    server: {
+      port: 3010,
+      strictPort: true,
+    },
+  },
   manifest: {
     name: 'Reflow Observer',
     description:

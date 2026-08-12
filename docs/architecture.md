@@ -4,13 +4,14 @@ Reflow separates browser observation, durable state, local processing, and model
 access so each boundary can be tested independently.
 
 ```text
-Chrome extension
-      |
-      v
-Hosted Supabase <--- local Next.js UI
-      ^                    |
-      |                    v
-Local worker ------> Vercel AI Gateway
+Chrome extension -- sanitized event inserts --> Hosted Supabase
+                                                   ^       ^
+                                                   |       |
+Local Next.js UI -- queue jobs + corrections ------+       |
+                                                           |
+Local worker -- claim jobs -------------------------------+
+      |                                                    |
+      +--> Vercel AI Gateway -- validated inference -------+
 ```
 
 The local workflow lab serves synthetic AP, ERP, and payment experiences on
@@ -29,12 +30,17 @@ contains sanitized events only. Approved host permissions are requested during
 the observer's explicit start gesture. Runtime content scripts are registered
 without persistence, so Chrome restart cannot silently resume observation.
 
-Hosted Supabase provides Auth, Postgres, and Realtime. Schema changes are
+Hosted Supabase provides Auth, Postgres, and the Data API. Observation windows
+and raw events are Realtime-enabled for future live UI updates, but the current
+pipeline uses direct event inserts and durable job polling. Schema changes are
 committed as migrations and pushed to a linked hosted development project.
 Reflow does not run a local Supabase stack.
 
-The Next.js application runs on localhost and provides context setup, process
-analysis, and human approval. Its trusted operations remain server-side.
+The Next.js application runs on localhost and provides study setup, task review,
+process analysis, and human approval. Normal browser operations use a Supabase
+publishable key and are constrained by RLS and role-validating RPCs. The
+Supabase secret key is used only by trusted local processes, including the admin
+authorization route and worker; it is never included in browser bundles.
 
 The Node worker runs locally and atomically claims durable jobs from Supabase.
 Abandoned locks become reclaimable after ten minutes so a worker restart does
@@ -49,6 +55,22 @@ persists the inference run, bounded tasks, evidence links, and deterministic
 task clusters. Stable digests and identifiers make retries idempotent. Analyst
 corrections are separate immutable overlays rather than edits to original model
 evidence.
+
+## Phase 4 data flow
+
+```text
+raw_event_tokens
+  -> normalized_steps + normalized_step_events
+  -> activity_segments
+  -> task_inference_runs + task_instances + task_instance_steps
+  -> task_clusters + task_cluster_members
+  -> task_corrections + task_correction_sources
+```
+
+Raw events remain immutable. Every derived task retains ordered links to its
+normalized steps, and every normalized step retains links to its sanitized
+source events. Department and role snapshots provide grouping context without
+prescribing which tasks the model should find.
 
 Reflow begins without document ingestion or vector search. Task inference is
 grounded in sanitized browser traces; embeddings will be introduced only if

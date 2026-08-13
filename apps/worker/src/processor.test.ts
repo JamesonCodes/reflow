@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { inferBrowserTasks } from '@reflow/ai';
+import type { inferBrowserTasks, reconcileTaskBoundary } from '@reflow/ai';
 import type {
   RawEventForNormalization,
   TaskInferenceOutput,
@@ -49,14 +49,16 @@ const events: RawEventForNormalization[] = [
 ];
 
 const output: TaskInferenceOutput = {
+  excludedRanges: [],
   tasks: [
     {
       apparentObjective: 'Review an invoice',
+      boundaryConfidence: 0.8,
       boundaryRationale: 'The single observed action starts this task.',
-      confidence: 0.8,
       endStepOrdinal: 1,
+      labelConfidence: 0.8,
       neutralLabel: 'Review invoice',
-      participatingSystems: ['ap.localhost'],
+      objectiveConfidence: 0.8,
       startStepOrdinal: 1,
     },
   ],
@@ -122,5 +124,64 @@ describe('task inference processor', () => {
     ).rejects.toThrow('invalid_task_inference_output');
     expect(store.persistInference).not.toHaveBeenCalled();
     expect(store.complete).not.toHaveBeenCalled();
+  });
+
+  it('infers a long completed observation in bounded sequential batches', async () => {
+    const store = repository();
+    store.loadObservation.mockResolvedValue({
+      context: { department: 'Accounts payable', role: 'Analyst', workspaceId },
+      events: Array.from({ length: 310 }, (_, index) => ({
+        ...events[0]!,
+        actionType:
+          index % 50 === 49 ? ('submit' as const) : ('click' as const),
+        elementLabel: `Action ${index}`,
+        id: `10000000-0000-4000-8000-${String(index + 100).padStart(12, '0')}`,
+        occurredAt: new Date(
+          Date.parse('2026-08-12T10:00:00.000Z') + index * 2_000,
+        ).toISOString(),
+        sequenceNo: index + 1,
+      })),
+    });
+    const infer = vi
+      .fn<typeof inferBrowserTasks>()
+      .mockImplementation((_configuration, request) =>
+        Promise.resolve({
+          excludedRanges: [],
+          tasks: [
+            {
+              apparentObjective: 'Complete one bounded work episode',
+              boundaryConfidence: 0.8,
+              boundaryRationale: 'The assignable batch is one fixture task.',
+              endStepOrdinal: request.assignableEndStepOrdinal!,
+              labelConfidence: 0.8,
+              neutralLabel: 'Complete work episode',
+              objectiveConfidence: 0.8,
+              startStepOrdinal: request.assignableStartStepOrdinal!,
+            },
+          ],
+        }),
+      );
+    const reconcile = vi.fn<typeof reconcileTaskBoundary>().mockResolvedValue({
+      apparentObjective: null,
+      boundaryConfidence: 0.9,
+      decision: 'keep_separate',
+      labelConfidence: 0.9,
+      neutralLabel: null,
+      objectiveConfidence: 0.9,
+      rationale: 'Each batch represents a separate repeated task.',
+    });
+
+    await processTaskInferenceJob(
+      job,
+      { apiKey: 'gateway-key', model: 'openai/gpt-5-mini' },
+      { infer, reconcile, repository: store },
+    );
+
+    expect(infer).toHaveBeenCalledTimes(3);
+    expect(reconcile).toHaveBeenCalledTimes(2);
+    const persisted = store.persistInference.mock.calls[0]?.[0] as {
+      tasks: unknown[];
+    };
+    expect(persisted.tasks).toHaveLength(3);
   });
 });

@@ -9,8 +9,8 @@ import {
 
 const boundedText = (maximum: number) => z.string().trim().min(1).max(maximum);
 
-export const normalizationVersion = 1 as const;
-export const taskInferencePromptVersion = 1 as const;
+export const normalizationVersion = 2 as const;
+export const taskInferencePromptVersion = 2 as const;
 
 export const rawEventForNormalizationSchema = z.strictObject({
   id: z.uuid(),
@@ -45,6 +45,7 @@ export const normalizedStepSchema = z.strictObject({
   startedAt: z.iso.datetime({ offset: true }),
   endedAt: z.iso.datetime({ offset: true }),
   sourceEventIds: z.array(z.uuid()).min(1),
+  interactionGroupId: z.uuid(),
   candidateBoundaryBefore: z.boolean(),
   boundaryReasons: z.array(
     z.enum([
@@ -75,14 +76,51 @@ export const taskInferenceTaskSchema = z.strictObject({
   apparentObjective: boundedText(300),
   startStepOrdinal: z.number().int().positive(),
   endStepOrdinal: z.number().int().positive(),
-  participatingSystems: z.array(capturedHostnameSchema).min(1).max(20),
-  confidence: z.number().min(0).max(1),
+  boundaryConfidence: z.number().min(0).max(1),
+  labelConfidence: z.number().min(0).max(1),
+  objectiveConfidence: z.number().min(0).max(1),
   boundaryRationale: boundedText(500),
 });
 
-export const taskInferenceOutputSchema = z.strictObject({
-  tasks: z.array(taskInferenceTaskSchema).max(100),
+export const taskExclusionClassificationSchema = z.enum([
+  'observation_context',
+  'transport_only',
+  'noise',
+  'uncertain_gap',
+]);
+
+export const taskInferenceExclusionSchema = z.strictObject({
+  startStepOrdinal: z.number().int().positive(),
+  endStepOrdinal: z.number().int().positive(),
+  classification: taskExclusionClassificationSchema,
+  reason: boundedText(500),
 });
+
+export const taskInferenceOutputSchema = z.strictObject({
+  tasks: z.array(taskInferenceTaskSchema).max(200),
+  excludedRanges: z.array(taskInferenceExclusionSchema).max(200),
+});
+
+export const taskBoundaryReconciliationSchema = z
+  .strictObject({
+    decision: z.enum(['keep_separate', 'merge']),
+    neutralLabel: boundedText(120).nullable(),
+    apparentObjective: boundedText(300).nullable(),
+    boundaryConfidence: z.number().min(0).max(1),
+    labelConfidence: z.number().min(0).max(1),
+    objectiveConfidence: z.number().min(0).max(1),
+    rationale: boundedText(500),
+  })
+  .superRefine((result, context) => {
+    if (
+      result.decision === 'merge' &&
+      (result.neutralLabel === null || result.apparentObjective === null)
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'Merged boundaries require a label and apparent objective',
+      });
+  });
 
 export const inferredTaskInstanceSchema = taskInferenceTaskSchema.extend({
   id: z.uuid(),
@@ -90,9 +128,18 @@ export const inferredTaskInstanceSchema = taskInferenceTaskSchema.extend({
   supportingStepIds: z.array(z.uuid()).min(1),
   startedAt: z.iso.datetime({ offset: true }),
   endedAt: z.iso.datetime({ offset: true }),
+  confidence: z.number().min(0).max(1),
+  participatingSystems: z.array(capturedHostnameSchema).min(1).max(20),
   clusterId: z.uuid(),
   clusterKey: z.string().regex(/^[a-f0-9]{64}$/),
 });
+
+export const materializedTaskExclusionSchema =
+  taskInferenceExclusionSchema.extend({
+    id: z.uuid(),
+    ordinal: z.number().int().positive(),
+    supportingStepIds: z.array(z.uuid()).min(1),
+  });
 
 export const taskCorrectionTypeSchema = z.enum([
   'rename',
@@ -116,7 +163,7 @@ export const taskCorrectionInputSchema = z
     const split = correction.splitAfterStepOrdinal;
     const valid =
       (correction.correctionType === 'rename' &&
-        sources === 1 &&
+        sources >= 1 &&
         labels === 1 &&
         split === null) ||
       (correction.correctionType === 'merge' &&
@@ -124,11 +171,11 @@ export const taskCorrectionInputSchema = z
         labels === 1 &&
         split === null) ||
       (correction.correctionType === 'split' &&
-        sources === 1 &&
+        sources >= 1 &&
         labels === 2 &&
         split !== null) ||
       (correction.correctionType === 'reject' &&
-        sources === 1 &&
+        sources >= 1 &&
         labels === 0 &&
         split === null);
     if (!valid)
@@ -144,5 +191,14 @@ export type RawEventForNormalization = z.infer<
 export type NormalizedStep = z.infer<typeof normalizedStepSchema>;
 export type ActivitySegment = z.infer<typeof activitySegmentSchema>;
 export type TaskInferenceOutput = z.infer<typeof taskInferenceOutputSchema>;
+export type TaskBoundaryReconciliation = z.infer<
+  typeof taskBoundaryReconciliationSchema
+>;
 export type InferredTaskInstance = z.infer<typeof inferredTaskInstanceSchema>;
+export type MaterializedTaskExclusion = z.infer<
+  typeof materializedTaskExclusionSchema
+>;
+export type TaskInferenceExclusion = z.infer<
+  typeof taskInferenceExclusionSchema
+>;
 export type TaskCorrectionInput = z.infer<typeof taskCorrectionInputSchema>;

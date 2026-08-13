@@ -1,6 +1,11 @@
 'use client';
 
-import { taskCorrectionInputSchema, type Tables } from '@reflow/contracts';
+import {
+  resolveEffectiveTasks,
+  taskCorrectionInputSchema,
+  taskCorrectionTypeSchema,
+  type Tables,
+} from '@reflow/contracts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { getSupabaseBrowserClient } from '../lib/supabase-browser';
@@ -11,6 +16,8 @@ type ProcessingJob = Tables<'processing_jobs'>;
 type InferenceRun = Tables<'task_inference_runs'>;
 type TaskInstance = Tables<'task_instances'>;
 type TaskCorrection = Tables<'task_corrections'>;
+type TaskCorrectionSource = Tables<'task_correction_sources'>;
+type TaskExclusion = Tables<'task_inference_exclusions'>;
 
 export function TaskAnalysisPanel({
   supabase,
@@ -24,6 +31,10 @@ export function TaskAnalysisPanel({
   const [runs, setRuns] = useState<InferenceRun[]>([]);
   const [tasks, setTasks] = useState<TaskInstance[]>([]);
   const [corrections, setCorrections] = useState<TaskCorrection[]>([]);
+  const [correctionSources, setCorrectionSources] = useState<
+    TaskCorrectionSource[]
+  >([]);
+  const [exclusions, setExclusions] = useState<TaskExclusion[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [primaryLabel, setPrimaryLabel] = useState('');
   const [secondaryLabel, setSecondaryLabel] = useState('');
@@ -72,15 +83,43 @@ export function TaskAnalysisPanel({
     setJobs(jobResult.data ?? []);
     setRuns(nextRuns);
     setCorrections(correctionResult.data ?? []);
+    const correctionIds = (correctionResult.data ?? []).map(
+      (correction) => correction.id,
+    );
+    const sourceResult =
+      correctionIds.length === 0
+        ? { data: [] as TaskCorrectionSource[], error: null }
+        : await supabase
+            .from('task_correction_sources')
+            .select('*')
+            .in('correction_id', correctionIds)
+            .order('source_position');
+    if (sourceResult.error) return setError(sourceResult.error.message);
+    setCorrectionSources(sourceResult.data ?? []);
     const latestRun = nextRuns[0];
-    if (!latestRun) return setTasks([]);
-    const taskResult = await supabase
-      .from('task_instances')
-      .select('*')
-      .eq('inference_run_id', latestRun.id)
-      .order('task_ordinal');
-    if (taskResult.error) setError(taskResult.error.message);
-    else setTasks(taskResult.data ?? []);
+    if (!latestRun) {
+      setTasks([]);
+      setExclusions([]);
+      return;
+    }
+    const [taskResult, exclusionResult] = await Promise.all([
+      supabase
+        .from('task_instances')
+        .select('*')
+        .eq('inference_run_id', latestRun.id)
+        .order('task_ordinal'),
+      supabase
+        .from('task_inference_exclusions')
+        .select('*')
+        .eq('inference_run_id', latestRun.id)
+        .order('exclusion_ordinal'),
+    ]);
+    if (taskResult.error || exclusionResult.error)
+      setError((taskResult.error ?? exclusionResult.error)!.message);
+    else {
+      setTasks(taskResult.data ?? []);
+      setExclusions(exclusionResult.data ?? []);
+    }
   }, [supabase, workspaceId]);
 
   useEffect(() => {
@@ -93,6 +132,55 @@ export function TaskAnalysisPanel({
       windows.find((window) => window.id === latestRun?.observation_window_id),
     [latestRun?.observation_window_id, windows],
   );
+  const effectiveResolution = useMemo(() => {
+    const taskIds = new Set(tasks.map((task) => task.id));
+    const relevantCorrections = corrections
+      .map((correction) => ({
+        correction,
+        sourceTaskInstanceIds: correctionSources
+          .filter((source) => source.correction_id === correction.id)
+          .sort((left, right) => left.source_position - right.source_position)
+          .map((source) => source.task_instance_id),
+      }))
+      .filter(
+        ({ sourceTaskInstanceIds }) =>
+          sourceTaskInstanceIds.length > 0 &&
+          sourceTaskInstanceIds.every((id) => taskIds.has(id)),
+      );
+    return resolveEffectiveTasks(
+      tasks.map((task) => ({
+        apparentObjective: task.apparent_objective,
+        confidence: Number(task.confidence),
+        endStepOrdinal: task.end_step_ordinal,
+        id: task.id,
+        inferenceRunId: task.inference_run_id,
+        neutralLabel: task.neutral_label,
+        participatingSystems: task.participating_systems,
+        startStepOrdinal: task.start_step_ordinal,
+      })),
+      relevantCorrections.map(({ correction, sourceTaskInstanceIds }) => ({
+        correctionType: taskCorrectionTypeSchema.parse(
+          correction.correction_type,
+        ),
+        createdAt: correction.created_at,
+        id: correction.id,
+        replacementLabels: correction.replacement_labels,
+        sourceTaskInstanceIds,
+        splitAfterStepOrdinal: correction.split_after_step_ordinal,
+      })),
+    );
+  }, [correctionSources, corrections, tasks]);
+
+  function toggleSources(sourceIds: string[], checked: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      for (const id of sourceIds) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
+      return [...next];
+    });
+  }
 
   async function enqueue(windowId: string) {
     setBusy(true);
@@ -239,31 +327,70 @@ export function TaskAnalysisPanel({
             </p>
           )}
           <div className="task-list">
-            {tasks.map((task) => (
-              <label className="task-card" key={task.id}>
+            {effectiveResolution.tasks.map((task) => (
+              <label className="task-card" key={task.effectiveId}>
                 <input
-                  checked={selected.includes(task.id)}
+                  checked={task.sourceTaskInstanceIds.every((id) =>
+                    selected.includes(id),
+                  )}
                   onChange={(event) =>
-                    setSelected((current) =>
-                      event.target.checked
-                        ? [...current, task.id]
-                        : current.filter((id) => id !== task.id),
+                    toggleSources(
+                      task.sourceTaskInstanceIds,
+                      event.target.checked,
                     )
                   }
                   type="checkbox"
                 />
                 <span>
-                  <strong>{task.neutral_label}</strong>
-                  <span>{task.apparent_objective}</span>
+                  <strong>{task.neutralLabel}</strong>
+                  <span>{task.apparentObjective}</span>
                   <small>
-                    Steps {task.start_step_ordinal}–{task.end_step_ordinal} ·{' '}
-                    {Math.round(Number(task.confidence) * 100)}% confidence ·{' '}
-                    {task.participating_systems.join(', ')}
+                    Steps {task.startStepOrdinal}–{task.endStepOrdinal} ·{' '}
+                    {Math.round(task.confidence * 100)}% confidence ·{' '}
+                    {task.participatingSystems.join(', ')}
+                    {task.correctionId ? ' · analyst corrected' : ''}
                   </small>
                 </span>
               </label>
             ))}
           </div>
+          {effectiveResolution.rejectedSourceTaskIds.length > 0 ? (
+            <p className="muted-copy">
+              {effectiveResolution.rejectedSourceTaskIds.length} inferred task
+              {effectiveResolution.rejectedSourceTaskIds.length === 1
+                ? ''
+                : 's'}{' '}
+              excluded by an analyst.
+            </p>
+          ) : null}
+          {tasks.length > 0 ? (
+            <details>
+              <summary>Original model inference</summary>
+              <ol>
+                {tasks.map((task) => (
+                  <li key={task.id}>
+                    {task.neutral_label} (steps {task.start_step_ordinal}–
+                    {task.end_step_ordinal})
+                  </li>
+                ))}
+              </ol>
+            </details>
+          ) : null}
+          {exclusions.length > 0 ? (
+            <details>
+              <summary>
+                {exclusions.length} excluded context/noise range(s)
+              </summary>
+              <ol>
+                {exclusions.map((exclusion) => (
+                  <li key={exclusion.id}>
+                    Steps {exclusion.start_step_ordinal}–
+                    {exclusion.end_step_ordinal}: {exclusion.classification}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          ) : null}
         </div>
       </div>
 
@@ -341,8 +468,16 @@ export function TaskAnalysisPanel({
             </button>
           </div>
           <p className="muted-copy">
-            {corrections.length} correction{corrections.length === 1 ? '' : 's'}{' '}
-            recorded.
+            {
+              corrections.filter((correction) =>
+                correctionSources.some(
+                  (source) =>
+                    source.correction_id === correction.id &&
+                    tasks.some((task) => task.id === source.task_instance_id),
+                ),
+              ).length
+            }{' '}
+            correction overlay(s) recorded for this inference.
           </p>
         </div>
       ) : null}

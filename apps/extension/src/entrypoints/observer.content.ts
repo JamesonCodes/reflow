@@ -94,6 +94,19 @@ export default defineContentScript({
         };
         if (candidate.configuration) configuration = candidate.configuration;
       }
+      if (
+        typeof message === 'object' &&
+        message !== null &&
+        'type' in message &&
+        message.type === 'recording:capture-context' &&
+        mayCapture()
+      ) {
+        send(
+          createSanitizedEvent(window.location.href, {
+            actionType: 'page_context',
+          }),
+        );
+      }
       return undefined;
     });
 
@@ -109,11 +122,9 @@ export default defineContentScript({
         ) {
           configuration = response.data as ContentConfiguration;
           if (mayCapture()) {
-            send(
-              createSanitizedEvent(window.location.href, {
-                actionType: navigation.initial(),
-              }),
-            );
+            void browser.runtime
+              .sendMessage({ type: 'capture:document-ready' })
+              .catch(() => undefined);
           }
         }
       })

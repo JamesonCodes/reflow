@@ -252,11 +252,17 @@ Deterministic preprocessing:
 - Treat shorter inactivity, major navigation, and tab changes as candidate
   boundaries.
 - Retain source-event links for every derived step.
+- Distinguish active-tab page context from genuine browser navigation.
+- Group compound browser telemetry without discarding source events.
+- Bound all-day observations into sequential 150-step inference batches and
+  reconcile only soft batch seams.
 
 Use Vercel AI Gateway structured output to infer task boundaries, neutral labels,
-apparent objectives, participating browser systems, supporting steps, and
-confidence. Analysts can rename, merge, split, or reject inferred tasks;
-corrections remain separate from the original inference.
+apparent objectives, supporting steps, and separate boundary, label, and
+objective confidence. Participating systems are derived from evidence. Every
+step must be assigned to a task or explicit context/noise range. Analysts can
+rename, merge, split, or reject effective tasks; corrections remain separate
+from the original inference.
 
 ### Checkpoint
 
@@ -267,11 +273,17 @@ corrections remain separate from the original inference.
 - Invalid model output cannot corrupt results.
 - Analyst corrections preserve the original inference.
 - Reprocessing is idempotent.
+- A long completed observation produces bounded batches and multiple ordered
+  tasks rather than one oversized model request.
+- Navigation-only startup and trailing transport cannot become standalone
+  business tasks.
 - Full workspace checks pass.
 
 ### Delivery
 
 `feat: add browser task inference`
+
+`fix: harden browser task inference`
 
 ## Phase 5 — As-Is process mining
 

@@ -11,6 +11,7 @@ export const capturedActionTypeSchema = z.enum([
   'domain_transition',
   'file_upload',
   'file_download',
+  'page_context',
   'out_of_scope_gap',
 ]);
 

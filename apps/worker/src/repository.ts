@@ -1,9 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
+  normalizationVersion,
   rawEventForNormalizationSchema,
   type Database,
   type InferredTaskInstance,
   type Json,
+  type MaterializedTaskExclusion,
   type RawEventForNormalization,
 } from '@reflow/contracts';
 
@@ -19,6 +21,7 @@ export interface ObservationContext {
 }
 
 export interface PersistInferenceInput {
+  exclusions: MaterializedTaskExclusion[];
   model: string;
   preprocessing: PreprocessedObservation;
   promptVersion: number;
@@ -118,6 +121,7 @@ export class TaskInferenceRepository {
       ended_at: step.endedAt,
       hostname: step.hostname,
       id: step.id,
+      interaction_group_id: step.interactionGroupId,
       normalized_path: step.normalizedPath,
       observation_window_id: step.observationWindowId,
       ordinal: step.ordinal,
@@ -142,6 +146,7 @@ export class TaskInferenceRepository {
     }));
     const tasks = input.tasks.map((task) => ({
       apparent_objective: task.apparentObjective,
+      boundary_confidence: task.boundaryConfidence,
       boundary_rationale: task.boundaryRationale,
       cluster_id: task.clusterId,
       cluster_key: task.clusterKey,
@@ -149,20 +154,32 @@ export class TaskInferenceRepository {
       end_step_ordinal: task.endStepOrdinal,
       ended_at: task.endedAt,
       id: task.id,
+      label_confidence: task.labelConfidence,
       neutral_label: task.neutralLabel,
+      objective_confidence: task.objectiveConfidence,
       ordinal: task.ordinal,
       participating_systems: task.participatingSystems,
       start_step_ordinal: task.startStepOrdinal,
       started_at: task.startedAt,
       supporting_step_ids: task.supportingStepIds,
     }));
+    const exclusions = input.exclusions.map((exclusion) => ({
+      classification: exclusion.classification,
+      end_step_ordinal: exclusion.endStepOrdinal,
+      id: exclusion.id,
+      ordinal: exclusion.ordinal,
+      reason: exclusion.reason,
+      start_step_ordinal: exclusion.startStepOrdinal,
+      supporting_step_ids: exclusion.supportingStepIds,
+    }));
 
     const { data, error } = await this.client.rpc(
-      'persist_task_inference_result',
+      'persist_task_inference_result_v2',
       {
         target_input_digest: input.preprocessing.digest,
+        target_exclusions: asJson(exclusions),
         target_model: input.model,
-        target_normalization_version: 1,
+        target_normalization_version: normalizationVersion,
         target_observation_window_id: input.windowId,
         target_prompt_version: input.promptVersion,
         target_run_id: input.runId,

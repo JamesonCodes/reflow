@@ -236,6 +236,7 @@ export type Database = {
           ended_at: string;
           hostname: string | null;
           id: string;
+          interaction_group_id: string | null;
           normalization_version: number;
           normalized_path: string | null;
           observation_window_id: string;
@@ -258,6 +259,7 @@ export type Database = {
           ended_at: string;
           hostname?: string | null;
           id: string;
+          interaction_group_id?: string | null;
           normalization_version: number;
           normalized_path?: string | null;
           observation_window_id: string;
@@ -280,6 +282,7 @@ export type Database = {
           ended_at?: string;
           hostname?: string | null;
           id?: string;
+          interaction_group_id?: string | null;
           normalization_version?: number;
           normalized_path?: string | null;
           observation_window_id?: string;
@@ -811,6 +814,103 @@ export type Database = {
           },
         ];
       };
+      task_inference_exclusion_steps: {
+        Row: {
+          created_at: string;
+          exclusion_id: string;
+          normalized_step_id: string;
+          step_position: number;
+        };
+        Insert: {
+          created_at?: string;
+          exclusion_id: string;
+          normalized_step_id: string;
+          step_position: number;
+        };
+        Update: {
+          created_at?: string;
+          exclusion_id?: string;
+          normalized_step_id?: string;
+          step_position?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_inference_exclusion_steps_exclusion_id_fkey';
+            columns: ['exclusion_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_inference_exclusions';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_inference_exclusion_steps_normalized_step_id_fkey';
+            columns: ['normalized_step_id'];
+            isOneToOne: false;
+            referencedRelation: 'normalized_steps';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      task_inference_exclusions: {
+        Row: {
+          classification: string;
+          created_at: string;
+          end_step_ordinal: number;
+          exclusion_ordinal: number;
+          id: string;
+          inference_run_id: string;
+          observation_window_id: string;
+          reason: string;
+          start_step_ordinal: number;
+          workspace_id: string;
+        };
+        Insert: {
+          classification: string;
+          created_at?: string;
+          end_step_ordinal: number;
+          exclusion_ordinal: number;
+          id: string;
+          inference_run_id: string;
+          observation_window_id: string;
+          reason: string;
+          start_step_ordinal: number;
+          workspace_id: string;
+        };
+        Update: {
+          classification?: string;
+          created_at?: string;
+          end_step_ordinal?: number;
+          exclusion_ordinal?: number;
+          id?: string;
+          inference_run_id?: string;
+          observation_window_id?: string;
+          reason?: string;
+          start_step_ordinal?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_inference_exclusions_inference_run_id_fkey';
+            columns: ['inference_run_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_inference_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_inference_exclusions_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'task_inference_exclusions_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       task_inference_runs: {
         Row: {
           created_at: string;
@@ -901,6 +1001,7 @@ export type Database = {
       task_instances: {
         Row: {
           apparent_objective: string;
+          boundary_confidence: number;
           boundary_rationale: string;
           confidence: number;
           created_at: string;
@@ -908,7 +1009,9 @@ export type Database = {
           ended_at: string;
           id: string;
           inference_run_id: string;
+          label_confidence: number;
           neutral_label: string;
+          objective_confidence: number;
           observation_window_id: string;
           participating_systems: string[];
           start_step_ordinal: number;
@@ -918,6 +1021,7 @@ export type Database = {
         };
         Insert: {
           apparent_objective: string;
+          boundary_confidence: number;
           boundary_rationale: string;
           confidence: number;
           created_at?: string;
@@ -925,7 +1029,9 @@ export type Database = {
           ended_at: string;
           id: string;
           inference_run_id: string;
+          label_confidence: number;
           neutral_label: string;
+          objective_confidence: number;
           observation_window_id: string;
           participating_systems: string[];
           start_step_ordinal: number;
@@ -935,6 +1041,7 @@ export type Database = {
         };
         Update: {
           apparent_objective?: string;
+          boundary_confidence?: number;
           boundary_rationale?: string;
           confidence?: number;
           created_at?: string;
@@ -942,7 +1049,9 @@ export type Database = {
           ended_at?: string;
           id?: string;
           inference_run_id?: string;
+          label_confidence?: number;
           neutral_label?: string;
+          objective_confidence?: number;
           observation_window_id?: string;
           participating_systems?: string[];
           start_step_ordinal?: number;
@@ -1267,6 +1376,68 @@ export type Database = {
       };
       persist_task_inference_result: {
         Args: {
+          target_input_digest: string;
+          target_model: string;
+          target_normalization_version: number;
+          target_observation_window_id: string;
+          target_prompt_version: number;
+          target_run_id: string;
+          target_segments: Json;
+          target_steps: Json;
+          target_tasks: Json;
+        };
+        Returns: {
+          created_at: string;
+          id: string;
+          input_digest: string;
+          model: string;
+          normalization_version: number;
+          observation_window_id: string;
+          prompt_version: number;
+          task_count: number;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'task_inference_runs';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      persist_task_inference_result_v2: {
+        Args: {
+          target_exclusions: Json;
+          target_input_digest: string;
+          target_model: string;
+          target_normalization_version: number;
+          target_observation_window_id: string;
+          target_prompt_version: number;
+          target_run_id: string;
+          target_segments: Json;
+          target_steps: Json;
+          target_tasks: Json;
+        };
+        Returns: {
+          created_at: string;
+          id: string;
+          input_digest: string;
+          model: string;
+          normalization_version: number;
+          observation_window_id: string;
+          prompt_version: number;
+          task_count: number;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'task_inference_runs';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      persist_task_inference_result_v2_inner: {
+        Args: {
+          target_exclusions: Json;
           target_input_digest: string;
           target_model: string;
           target_normalization_version: number;

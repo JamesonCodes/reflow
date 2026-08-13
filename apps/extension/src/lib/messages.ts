@@ -22,6 +22,7 @@ export const extensionRequestSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('recording:resume') }),
   z.strictObject({ type: z.literal('recording:stop') }),
   z.strictObject({ type: z.literal('content:get-config') }),
+  z.strictObject({ type: z.literal('capture:document-ready') }),
   z.strictObject({
     type: z.literal('capture:event'),
     event: sanitizedCapturedEventSchema,

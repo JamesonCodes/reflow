@@ -48,13 +48,20 @@ not strand an observation. Phase 4 deterministically orders and collapses raw
 events, records source-event evidence for every normalized step, and splits hard
 activity segments after five minutes of inactivity. Shorter pauses, navigation,
 tab changes, and cross-domain transitions remain model-visible boundary hints.
+Compound click, submit, and navigation telemetry shares a stable interaction
+group without losing individual evidence. Observation-start page context is
+recorded separately from user work.
 
 Task inference calls use structured output through the shared Vercel AI Gateway
-package. Model output is validated before a single transactional database call
-persists the inference run, bounded tasks, evidence links, and deterministic
-task clusters. Stable digests and identifiers make retries idempotent. Analyst
-corrections are separate immutable overlays rather than edits to original model
-evidence.
+package. After the observer stops an observation, hard activity segments are
+processed sequentially in batches of at most 150 assignable steps with bounded
+context around soft seams. Seam candidates are reconciled without crossing a
+five-minute boundary. Model output must classify every step as task evidence or
+explicit context/noise before a single transactional database call persists the
+result. Stable digests and evidence-based cluster identifiers make retries and
+label changes deterministic. Analyst corrections remain immutable overlays;
+the UI resolves their latest effective projection without editing original
+model evidence.
 
 ## Phase 4 data flow
 
@@ -63,13 +70,15 @@ raw_event_tokens
   -> normalized_steps + normalized_step_events
   -> activity_segments
   -> task_inference_runs + task_instances + task_instance_steps
+  -> task_inference_exclusions + task_inference_exclusion_steps
   -> task_clusters + task_cluster_members
   -> task_corrections + task_correction_sources
 ```
 
 Raw events remain immutable. Every derived task retains ordered links to its
 normalized steps, and every normalized step retains links to its sanitized
-source events. Department and role snapshots provide grouping context without
+source events. Every normalized step is covered by either a task or a persisted
+exclusion. Department and role snapshots provide grouping context without
 prescribing which tasks the model should find.
 
 Reflow begins without document ingestion or vector search. Task inference is

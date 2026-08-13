@@ -9,14 +9,16 @@ describe('task inference contracts', () => {
   it('accepts bounded evidence-grounded task output', () => {
     expect(
       taskInferenceOutputSchema.safeParse({
+        excludedRanges: [],
         tasks: [
           {
             apparentObjective: 'Validate an invoice and prepare payment',
+            boundaryConfidence: 0.91,
             boundaryRationale: 'Steps share one invoice review objective.',
-            confidence: 0.91,
             endStepOrdinal: 12,
+            labelConfidence: 0.91,
             neutralLabel: 'Review invoice',
-            participatingSystems: ['ap.localhost', 'erp.localhost'],
+            objectiveConfidence: 0.91,
             startStepOrdinal: 1,
           },
         ],

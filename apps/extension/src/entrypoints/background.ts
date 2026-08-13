@@ -2,6 +2,9 @@ import { browser, type Browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 
 import { parseExtensionRequest } from '../lib/messages';
+import { DocumentNavigationGate } from '../lib/document-navigation';
+import { selectPageContextTab } from '../lib/page-context';
+import { createSanitizedEvent } from '../lib/sanitizer';
 import type {
   ActiveObservationState,
   ExtensionResponse,
@@ -35,6 +38,7 @@ import {
 const observerScriptId = 'reflow-observer';
 const observerScriptFile = '/content-scripts/observer.js' as const;
 const retryAlarmName = 'reflow-delivery-retry';
+const documentNavigationGate = new DocumentNavigationGate();
 
 function configuration(state: ActiveObservationState | null) {
   return {
@@ -102,6 +106,17 @@ async function registerObserverScript(state: ActiveObservationState) {
   ]);
 
   const tabs = await browser.tabs.query({});
+  documentNavigationGate.reset(
+    tabs
+      .filter(
+        (tab) =>
+          typeof tab.id === 'number' &&
+          !tab.incognito &&
+          tab.url &&
+          isObservableUrl(tab.url, state.domains, state.exclusions),
+      )
+      .map((tab) => tab.id as number),
+  );
   await Promise.allSettled(
     tabs.map(async (tab) => {
       if (
@@ -118,6 +133,15 @@ async function registerObserverScript(state: ActiveObservationState) {
     }),
   );
   await notifyContentScripts(state);
+}
+
+async function captureActivePageContext(state: ActiveObservationState) {
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const tab = selectPageContextTab(tabs, state);
+  if (!tab?.id) return;
+  await browser.tabs
+    .sendMessage(tab.id, { type: 'recording:capture-context' })
+    .catch(() => undefined);
 }
 
 async function popupSnapshot(): Promise<PopupSnapshot> {
@@ -172,6 +196,7 @@ async function startRecording(defaults: ObserverDefaults) {
     await setOpenObservationWindowId(state.windowId);
     await setObservationState(state);
     await registerObserverScript(state);
+    await captureActivePageContext(state);
     await setBadge('active');
   } catch (error) {
     await clearObservationState();
@@ -206,13 +231,17 @@ async function transitionRecording(status: 'active' | 'paused' | 'completed') {
   }
 
   if (status === 'completed') {
+    documentNavigationGate.reset();
     await unregisterObserverScript();
     await notifyContentScripts(null);
     await setBadge('off');
     return;
   }
 
-  if (status === 'active') await registerObserverScript(state);
+  if (status === 'active') {
+    await registerObserverScript(state);
+    await captureActivePageContext(state);
+  }
   await notifyContentScripts(state);
   await setBadge(status);
 }
@@ -305,6 +334,21 @@ async function handleRequest(
           ok: true,
           data: configuration(await getObservationState()),
         };
+      }
+      case 'capture:document-ready': {
+        if (!sender.tab?.id || sender.tab.incognito || !sender.tab.url)
+          return { ok: false, error: 'content_sender_required' };
+        if (!documentNavigationGate.shouldCapture(sender.tab.id))
+          return { ok: true, data: undefined };
+        const accepted = await enqueueCapturedEvent(
+          createSanitizedEvent(sender.tab.url, { actionType: 'navigate' }),
+          sender.tab.id,
+          sender.tab.url,
+        );
+        if (accepted) await flushQueue();
+        return accepted
+          ? { ok: true, data: undefined }
+          : { ok: false, error: 'event_rejected' };
       }
       case 'capture:event': {
         if (!sender.tab?.id || sender.tab.incognito || !sender.tab.url)

@@ -7,10 +7,6 @@ export class NavigationTracker {
     this.#currentUrl = initialUrl;
   }
 
-  initial(): CapturedActionType {
-    return 'navigate';
-  }
-
   observe(nextUrl: string): CapturedActionType | null {
     if (nextUrl === this.#currentUrl) return null;
     const previous = new URL(this.#currentUrl);

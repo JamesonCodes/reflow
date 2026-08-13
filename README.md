@@ -13,7 +13,8 @@ durable data, while Vercel AI Gateway will provide a provider-neutral model
 boundary beginning with task inference.
 
 Reflow currently covers study setup, privacy-safe browser observation, and
-evidence-backed browser task inference. Process mining, redesign, and export are delivered incrementally through the
+evidence-backed browser task inference, including bounded post-observation
+analysis for all-day recording windows. Process mining, redesign, and export are delivered incrementally through the
 [project roadmap](docs/roadmap.md).
 
 ## Why Reflow

@@ -9,6 +9,13 @@ export {
   type WorkerEnvironment,
 } from './environment';
 export {
+  resolveEffectiveTasks,
+  type EffectiveTaskCorrection,
+  type EffectiveTaskInstance,
+  type EffectiveTaskResolution,
+  type EffectiveTaskSource,
+} from './effective-tasks';
+export {
   capturedActionTypeSchema,
   capturedHostnameSchema,
   normalizedBrowserPathSchema,
@@ -35,20 +42,27 @@ export {
 export {
   activitySegmentSchema,
   inferredTaskInstanceSchema,
+  materializedTaskExclusionSchema,
   normalizationVersion,
   normalizedStepSchema,
   rawEventForNormalizationSchema,
   taskCorrectionInputSchema,
   taskCorrectionTypeSchema,
+  taskBoundaryReconciliationSchema,
   taskInferenceOutputSchema,
+  taskInferenceExclusionSchema,
+  taskExclusionClassificationSchema,
   taskInferencePromptVersion,
   taskInferenceTaskSchema,
   type ActivitySegment,
   type InferredTaskInstance,
+  type MaterializedTaskExclusion,
   type NormalizedStep,
   type RawEventForNormalization,
   type TaskCorrectionInput,
+  type TaskBoundaryReconciliation,
   type TaskInferenceOutput,
+  type TaskInferenceExclusion,
 } from './task-inference';
 export {
   Constants as databaseConstants,

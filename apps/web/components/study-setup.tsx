@@ -21,6 +21,7 @@ import {
 
 import { getSupabaseBrowserClient } from '../lib/supabase-browser';
 import { TaskAnalysisPanel } from './task-analysis';
+import { ProcessAnalysisPanel } from './process-analysis';
 
 type Supabase = NonNullable<ReturnType<typeof getSupabaseBrowserClient>>;
 type Workspace = Tables<'workspaces'>;
@@ -625,6 +626,7 @@ function AdminWorkspace({
           <a href="#domains">Browser scope</a>
           <a href="#invites">Observer invites</a>
           <a href="#task-analysis">Inferred tasks</a>
+          <a href="#process-analysis">As-Is processes</a>
         </nav>
         <div className="sidebar-note">
           <strong>Discovery, not prescription</strong>
@@ -1028,6 +1030,7 @@ function AdminWorkspace({
           </div>
         </section>
         <TaskAnalysisPanel supabase={supabase} workspaceId={workspace.id} />
+        <ProcessAnalysisPanel supabase={supabase} workspaceId={workspace.id} />
       </div>
     </main>
   );

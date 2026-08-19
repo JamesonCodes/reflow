@@ -9,6 +9,12 @@ export {
   type WorkerEnvironment,
 } from './environment';
 export {
+  resolveEffectiveProcessCandidates,
+  type EffectiveProcessCandidate,
+  type EffectiveProcessCandidateCorrection,
+  type EffectiveProcessCandidateSource,
+} from './effective-processes';
+export {
   resolveEffectiveTasks,
   type EffectiveTaskCorrection,
   type EffectiveTaskInstance,
@@ -29,6 +35,23 @@ export {
   type QueuedCapturedEvent,
   type SanitizedCapturedEvent,
 } from './observation';
+export {
+  miningTaskSchema,
+  processBoundaryOutputSchema,
+  processCandidateCorrectionInputSchema,
+  processCandidateCorrectionTypeSchema,
+  processCandidateSchema,
+  processFindingSchema,
+  processGraphEdgeSchema,
+  processMetricsSchema,
+  processMiningAlgorithmVersion,
+  processMiningPromptVersion,
+  type MiningTask,
+  type ProcessBoundaryOutput,
+  type ProcessCandidate,
+  type ProcessCandidateCorrectionInput,
+  type ProcessFinding,
+} from './process-mining';
 export {
   approvedHostnameSchema,
   departmentNameSchema,

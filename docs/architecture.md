@@ -63,6 +63,16 @@ label changes deterministic. Analyst corrections remain immutable overlays;
 the UI resolves their latest effective projection without editing original
 model evidence.
 
+Phase 5 selects the latest successful inference for every completed observation
+in a department, applies analyst task corrections, and freezes those effective
+tasks into a versioned mining run. Deterministic structured-evidence similarity
+forms task clusters. Gateway structured output separates back-to-back process
+instances inside each five-minute-bounded activity segment, while exact coverage
+validation prevents invented or dropped tasks. Ordered sequence similarity then
+promotes only groups with at least two observed instances to recurring process
+candidates. Metrics, graph edges, variants, and findings are calculated
+deterministically and retain observation provenance.
+
 ## Phase 4 data flow
 
 ```text
@@ -75,6 +85,21 @@ raw_event_tokens
   -> task_corrections + task_correction_sources
 ```
 
+## Phase 5 data flow
+
+```text
+latest task_inference_runs + task_corrections
+  -> process_mining_runs + process_task_snapshots
+  -> process_instances + process_unmatched_work
+  -> process_candidates + process_candidate_instances
+  -> process_variants + process_graph_edges + process_findings
+  -> process_candidate_corrections + correction sources
+```
+
+Original task inference and process mining results remain immutable. Analyst
+decisions resolve into an effective candidate projection; confirmed candidates
+are the only Phase 6 redesign inputs.
+
 Raw events remain immutable. Every derived task retains ordered links to its
 normalized steps, and every normalized step retains links to its sanitized
 source events. Every normalized step is covered by either a task or a persisted
@@ -84,7 +109,9 @@ prescribing which tasks the model should find.
 Reflow begins without document ingestion or vector search. Task inference is
 grounded in sanitized browser traces; embeddings will be introduced only if
 later clustering benchmarks demonstrate a need. Any future embedding setting
-must use the exact name `REFLOW_EMBEDDING_MODEL`.
+must use the exact name `REFLOW_EMBEDDING_MODEL`. The evaluation criteria and
+provider-neutral integration constraints are documented in
+[Future embedding support](future-embeddings.md).
 
 ## Product boundary
 

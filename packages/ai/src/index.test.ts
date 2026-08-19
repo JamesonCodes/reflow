@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import type { NormalizedStep } from '@reflow/contracts';
+import type { MiningTask, NormalizedStep } from '@reflow/contracts';
 
-import { inferBrowserTasks, reconcileTaskBoundary } from './index';
+import {
+  inferBrowserTasks,
+  inferProcessBoundaries,
+  reconcileTaskBoundary,
+} from './index';
 
 const configuration = {
   apiKey: 'test-gateway-key',
@@ -108,5 +112,51 @@ describe('Vercel AI Gateway task inference adapter', () => {
           }),
       ),
     ).resolves.toMatchObject({ decision: 'merge' });
+  });
+});
+
+describe('Vercel AI Gateway process mining adapter', () => {
+  it('validates complete process boundary output', async () => {
+    const task: MiningTask = {
+      apparentObjective: 'Validate an invoice',
+      confidence: 0.9,
+      department: 'Accounts Payable',
+      departmentId: '10000000-0000-4000-8000-000000000010',
+      endedAt: '2026-08-12T10:01:00.000Z',
+      endStepOrdinal: 5,
+      featureTokens: ['action:submit'],
+      hardSegmentOrdinal: 1,
+      id: '10000000-0000-4000-8000-000000000011',
+      neutralLabel: 'Validate invoice',
+      observationWindowId: '10000000-0000-4000-8000-000000000012',
+      ordinal: 1,
+      participatingSystems: ['ap.localhost'],
+      role: 'Analyst',
+      sourceCorrectionId: null,
+      sourceTaskInstanceIds: ['10000000-0000-4000-8000-000000000013'],
+      startedAt: '2026-08-12T10:00:00.000Z',
+      startStepOrdinal: 1,
+      workspaceId: '10000000-0000-4000-8000-000000000014',
+    };
+    await expect(
+      inferProcessBoundaries(
+        configuration,
+        { department: task.department, role: task.role, tasks: [task] },
+        (_config, prompt) => {
+          expect(prompt).toContain('back-to-back processes');
+          return Promise.resolve({
+            excludedRanges: [
+              {
+                classification: 'standalone_work',
+                endTaskOrdinal: 1,
+                reason: 'Only one process-shaped task was observed.',
+                startTaskOrdinal: 1,
+              },
+            ],
+            processInstances: [],
+          });
+        },
+      ),
+    ).resolves.toMatchObject({ excludedRanges: [{ startTaskOrdinal: 1 }] });
   });
 });

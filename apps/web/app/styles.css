@@ -596,6 +596,66 @@ select:hover {
   margin-top: 0.35rem;
 }
 
+.process-toolbar,
+.process-title,
+.metric-strip {
+  align-items: center;
+  display: flex;
+  gap: 0.8rem;
+}
+
+.process-toolbar {
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.process-toolbar label {
+  min-width: min(22rem, 100%);
+}
+
+.process-candidate-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.process-candidate {
+  background: #f7f9f6;
+  border: 1px solid #e1e7e0;
+  border-radius: 0.8rem;
+  padding: 1rem;
+}
+
+.process-title span,
+.process-title small,
+.instance-list {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.process-title small,
+.metric-strip,
+.process-candidate > p,
+.instance-list {
+  color: #6d7971;
+  font-size: 0.72rem;
+}
+
+.metric-strip {
+  flex-wrap: wrap;
+  margin: 0.8rem 0;
+}
+
+.metric-strip span {
+  background: #eaf0e9;
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+}
+
+.instance-list {
+  margin: 0.75rem 0;
+}
+
 .correction-panel {
   border-top: 1px solid #e1e7e0;
   margin-top: 1.5rem;

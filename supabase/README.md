@@ -20,6 +20,7 @@ psql "$REFLOW_TEST_DATABASE_URL" --file supabase/tests/phase2.sql
 psql "$REFLOW_TEST_DATABASE_URL" --file supabase/tests/phase3.sql
 psql "$REFLOW_TEST_DATABASE_URL" --file supabase/tests/phase4.sql
 pnpm supabase db query --linked --file supabase/tests/phase4a.sql
+pnpm supabase db query --linked --file supabase/tests/phase5.sql
 bash supabase/tests/concurrent-job-claims.sh
 ```
 

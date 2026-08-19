@@ -531,6 +531,645 @@ export type Database = {
           },
         ];
       };
+      process_candidate_correction_sources: {
+        Row: {
+          correction_id: string;
+          process_candidate_id: string;
+          source_position: number;
+        };
+        Insert: {
+          correction_id: string;
+          process_candidate_id: string;
+          source_position: number;
+        };
+        Update: {
+          correction_id?: string;
+          process_candidate_id?: string;
+          source_position?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_candidate_correction_sources_correction_id_fkey';
+            columns: ['correction_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_candidate_corrections';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_candidate_correction_sources_process_candidate_id_fkey';
+            columns: ['process_candidate_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_candidates';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_candidate_corrections: {
+        Row: {
+          correction_type: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          mining_run_id: string;
+          reason: string | null;
+          replacement_labels: string[];
+          selected_process_instance_ids: string[];
+          workspace_id: string;
+        };
+        Insert: {
+          correction_type: string;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          mining_run_id: string;
+          reason?: string | null;
+          replacement_labels?: string[];
+          selected_process_instance_ids?: string[];
+          workspace_id: string;
+        };
+        Update: {
+          correction_type?: string;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          mining_run_id?: string;
+          reason?: string | null;
+          replacement_labels?: string[];
+          selected_process_instance_ids?: string[];
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_candidate_corrections_mining_run_id_fkey';
+            columns: ['mining_run_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_mining_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_candidate_corrections_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_candidate_instances: {
+        Row: {
+          process_candidate_id: string;
+          process_instance_id: string;
+          source_position: number;
+        };
+        Insert: {
+          process_candidate_id: string;
+          process_instance_id: string;
+          source_position: number;
+        };
+        Update: {
+          process_candidate_id?: string;
+          process_instance_id?: string;
+          source_position?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_candidate_instances_process_candidate_id_fkey';
+            columns: ['process_candidate_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_candidates';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_candidate_instances_process_instance_id_fkey';
+            columns: ['process_instance_id'];
+            isOneToOne: true;
+            referencedRelation: 'process_instances';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_candidates: {
+        Row: {
+          apparent_outcome: string;
+          candidate_key: string;
+          canonical_cluster_sequence: string[];
+          confidence: number;
+          created_at: string;
+          id: string;
+          instance_count: number;
+          metrics: Json;
+          mining_run_id: string;
+          neutral_label: string;
+          observation_count: number;
+          participating_systems: string[];
+          variant_count: number;
+          workspace_id: string;
+        };
+        Insert: {
+          apparent_outcome: string;
+          candidate_key: string;
+          canonical_cluster_sequence: string[];
+          confidence: number;
+          created_at?: string;
+          id: string;
+          instance_count: number;
+          metrics: Json;
+          mining_run_id: string;
+          neutral_label: string;
+          observation_count: number;
+          participating_systems: string[];
+          variant_count: number;
+          workspace_id: string;
+        };
+        Update: {
+          apparent_outcome?: string;
+          candidate_key?: string;
+          canonical_cluster_sequence?: string[];
+          confidence?: number;
+          created_at?: string;
+          id?: string;
+          instance_count?: number;
+          metrics?: Json;
+          mining_run_id?: string;
+          neutral_label?: string;
+          observation_count?: number;
+          participating_systems?: string[];
+          variant_count?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_candidates_mining_run_id_fkey';
+            columns: ['mining_run_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_mining_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_candidates_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_findings: {
+        Row: {
+          created_at: string;
+          evidence_observation_window_ids: string[];
+          evidence_task_snapshot_ids: string[];
+          finding_type: string;
+          id: string;
+          process_candidate_id: string;
+          severity: string;
+          summary: string;
+        };
+        Insert: {
+          created_at?: string;
+          evidence_observation_window_ids: string[];
+          evidence_task_snapshot_ids: string[];
+          finding_type: string;
+          id: string;
+          process_candidate_id: string;
+          severity: string;
+          summary: string;
+        };
+        Update: {
+          created_at?: string;
+          evidence_observation_window_ids?: string[];
+          evidence_task_snapshot_ids?: string[];
+          finding_type?: string;
+          id?: string;
+          process_candidate_id?: string;
+          severity?: string;
+          summary?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_findings_process_candidate_id_fkey';
+            columns: ['process_candidate_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_candidates';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_graph_edges: {
+        Row: {
+          id: string;
+          median_transition_seconds: number;
+          occurrence_count: number;
+          process_candidate_id: string;
+          source_cluster_key: string;
+          target_cluster_key: string;
+        };
+        Insert: {
+          id: string;
+          median_transition_seconds: number;
+          occurrence_count: number;
+          process_candidate_id: string;
+          source_cluster_key: string;
+          target_cluster_key: string;
+        };
+        Update: {
+          id?: string;
+          median_transition_seconds?: number;
+          occurrence_count?: number;
+          process_candidate_id?: string;
+          source_cluster_key?: string;
+          target_cluster_key?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_graph_edges_process_candidate_id_fkey';
+            columns: ['process_candidate_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_candidates';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_instances: {
+        Row: {
+          apparent_outcome: string;
+          boundary_rationale: string;
+          cluster_sequence: string[];
+          confidence: number;
+          created_at: string;
+          department_snapshot: string;
+          duration_seconds: number;
+          ended_at: string;
+          id: string;
+          mining_run_id: string;
+          neutral_label: string;
+          observation_window_id: string;
+          role_snapshot: string | null;
+          started_at: string;
+          task_snapshot_ids: string[];
+          workspace_id: string;
+        };
+        Insert: {
+          apparent_outcome: string;
+          boundary_rationale: string;
+          cluster_sequence: string[];
+          confidence: number;
+          created_at?: string;
+          department_snapshot: string;
+          duration_seconds: number;
+          ended_at: string;
+          id: string;
+          mining_run_id: string;
+          neutral_label: string;
+          observation_window_id: string;
+          role_snapshot?: string | null;
+          started_at: string;
+          task_snapshot_ids: string[];
+          workspace_id: string;
+        };
+        Update: {
+          apparent_outcome?: string;
+          boundary_rationale?: string;
+          cluster_sequence?: string[];
+          confidence?: number;
+          created_at?: string;
+          department_snapshot?: string;
+          duration_seconds?: number;
+          ended_at?: string;
+          id?: string;
+          mining_run_id?: string;
+          neutral_label?: string;
+          observation_window_id?: string;
+          role_snapshot?: string | null;
+          started_at?: string;
+          task_snapshot_ids?: string[];
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_instances_mining_run_id_fkey';
+            columns: ['mining_run_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_mining_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_instances_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'process_instances_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_mining_runs: {
+        Row: {
+          algorithm_version: number;
+          created_at: string;
+          department_id: string;
+          id: string;
+          input_digest: string;
+          model: string;
+          process_candidate_count: number;
+          process_instance_count: number;
+          prompt_version: number;
+          task_snapshot_count: number;
+          workspace_id: string;
+        };
+        Insert: {
+          algorithm_version: number;
+          created_at?: string;
+          department_id: string;
+          id: string;
+          input_digest: string;
+          model: string;
+          process_candidate_count: number;
+          process_instance_count: number;
+          prompt_version: number;
+          task_snapshot_count: number;
+          workspace_id: string;
+        };
+        Update: {
+          algorithm_version?: number;
+          created_at?: string;
+          department_id?: string;
+          id?: string;
+          input_digest?: string;
+          model?: string;
+          process_candidate_count?: number;
+          process_instance_count?: number;
+          prompt_version?: number;
+          task_snapshot_count?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_mining_runs_department_fkey';
+            columns: ['workspace_id', 'department_id'];
+            isOneToOne: false;
+            referencedRelation: 'departments';
+            referencedColumns: ['workspace_id', 'id'];
+          },
+          {
+            foreignKeyName: 'process_mining_runs_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_task_snapshot_sources: {
+        Row: {
+          source_position: number;
+          task_instance_id: string;
+          task_snapshot_id: string;
+        };
+        Insert: {
+          source_position: number;
+          task_instance_id: string;
+          task_snapshot_id: string;
+        };
+        Update: {
+          source_position?: number;
+          task_instance_id?: string;
+          task_snapshot_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_task_snapshot_sources_task_instance_id_fkey';
+            columns: ['task_instance_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_instances';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_task_snapshot_sources_task_snapshot_id_fkey';
+            columns: ['task_snapshot_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_task_snapshots';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_task_snapshots: {
+        Row: {
+          apparent_objective: string;
+          cluster_key: string;
+          confidence: number;
+          created_at: string;
+          department_id: string;
+          department_snapshot: string;
+          end_step_ordinal: number;
+          ended_at: string;
+          feature_signature: string;
+          feature_tokens: Json;
+          hard_segment_ordinal: number;
+          id: string;
+          mining_run_id: string;
+          neutral_label: string;
+          observation_window_id: string;
+          participating_systems: string[];
+          role_snapshot: string | null;
+          source_correction_id: string | null;
+          start_step_ordinal: number;
+          started_at: string;
+          task_ordinal: number;
+          workspace_id: string;
+        };
+        Insert: {
+          apparent_objective: string;
+          cluster_key: string;
+          confidence: number;
+          created_at?: string;
+          department_id: string;
+          department_snapshot: string;
+          end_step_ordinal: number;
+          ended_at: string;
+          feature_signature: string;
+          feature_tokens: Json;
+          hard_segment_ordinal: number;
+          id: string;
+          mining_run_id: string;
+          neutral_label: string;
+          observation_window_id: string;
+          participating_systems: string[];
+          role_snapshot?: string | null;
+          source_correction_id?: string | null;
+          start_step_ordinal: number;
+          started_at: string;
+          task_ordinal: number;
+          workspace_id: string;
+        };
+        Update: {
+          apparent_objective?: string;
+          cluster_key?: string;
+          confidence?: number;
+          created_at?: string;
+          department_id?: string;
+          department_snapshot?: string;
+          end_step_ordinal?: number;
+          ended_at?: string;
+          feature_signature?: string;
+          feature_tokens?: Json;
+          hard_segment_ordinal?: number;
+          id?: string;
+          mining_run_id?: string;
+          neutral_label?: string;
+          observation_window_id?: string;
+          participating_systems?: string[];
+          role_snapshot?: string | null;
+          source_correction_id?: string | null;
+          start_step_ordinal?: number;
+          started_at?: string;
+          task_ordinal?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_task_snapshots_department_fkey';
+            columns: ['workspace_id', 'department_id'];
+            isOneToOne: false;
+            referencedRelation: 'departments';
+            referencedColumns: ['workspace_id', 'id'];
+          },
+          {
+            foreignKeyName: 'process_task_snapshots_mining_run_id_fkey';
+            columns: ['mining_run_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_mining_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_task_snapshots_source_correction_id_fkey';
+            columns: ['source_correction_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_corrections';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_task_snapshots_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'process_task_snapshots_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_unmatched_work: {
+        Row: {
+          classification: string;
+          created_at: string;
+          id: string;
+          mining_run_id: string;
+          observation_window_id: string;
+          reason: string;
+          task_snapshot_ids: string[];
+          workspace_id: string;
+        };
+        Insert: {
+          classification: string;
+          created_at?: string;
+          id?: string;
+          mining_run_id: string;
+          observation_window_id: string;
+          reason: string;
+          task_snapshot_ids: string[];
+          workspace_id: string;
+        };
+        Update: {
+          classification?: string;
+          created_at?: string;
+          id?: string;
+          mining_run_id?: string;
+          observation_window_id?: string;
+          reason?: string;
+          task_snapshot_ids?: string[];
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_unmatched_work_mining_run_id_fkey';
+            columns: ['mining_run_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_mining_runs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_unmatched_work_window_fkey';
+            columns: ['observation_window_id', 'workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'observation_windows';
+            referencedColumns: ['id', 'workspace_id'];
+          },
+          {
+            foreignKeyName: 'process_unmatched_work_workspace_id_fkey';
+            columns: ['workspace_id'];
+            isOneToOne: false;
+            referencedRelation: 'workspaces';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_variants: {
+        Row: {
+          cluster_sequence: string[];
+          created_at: string;
+          id: string;
+          occurrence_count: number;
+          process_candidate_id: string;
+          representative_process_instance_id: string;
+          variant_key: string;
+        };
+        Insert: {
+          cluster_sequence: string[];
+          created_at?: string;
+          id: string;
+          occurrence_count: number;
+          process_candidate_id: string;
+          representative_process_instance_id: string;
+          variant_key: string;
+        };
+        Update: {
+          cluster_sequence?: string[];
+          created_at?: string;
+          id?: string;
+          occurrence_count?: number;
+          process_candidate_id?: string;
+          representative_process_instance_id?: string;
+          variant_key?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_variants_process_candidate_id_fkey';
+            columns: ['process_candidate_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_candidates';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_variants_representative_process_instance_id_fkey';
+            columns: ['representative_process_instance_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_instances';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       processing_jobs: {
         Row: {
           attempt_count: number;
@@ -1247,6 +1886,34 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      create_process_candidate_correction: {
+        Args: {
+          target_correction_type: string;
+          target_mining_run_id: string;
+          target_process_candidate_ids: string[];
+          target_reason?: string;
+          target_replacement_labels?: string[];
+          target_selected_process_instance_ids?: string[];
+          target_workspace_id: string;
+        };
+        Returns: {
+          correction_type: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          mining_run_id: string;
+          reason: string | null;
+          replacement_labels: string[];
+          selected_process_instance_ids: string[];
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'process_candidate_corrections';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_task_correction: {
         Args: {
           target_correction_type: string;
@@ -1299,6 +1966,32 @@ export type Database = {
           invite_code: string;
           invite_id: string;
         }[];
+      };
+      enqueue_process_mining: {
+        Args: { target_department_id: string };
+        Returns: {
+          attempt_count: number;
+          available_at: string;
+          created_at: string;
+          entity_id: string;
+          error_code: string | null;
+          error_detail: string | null;
+          id: number;
+          job_type: string;
+          lock_token: string | null;
+          locked_at: string | null;
+          locked_by: string | null;
+          max_attempts: number;
+          status: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'processing_jobs';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       enqueue_task_inference: {
         Args: { target_observation_window_id: string };
@@ -1373,6 +2066,22 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      persist_process_mining_result: {
+        Args: {
+          target_algorithm_version: number;
+          target_candidates: Json;
+          target_department_id: string;
+          target_input_digest: string;
+          target_instances: Json;
+          target_model: string;
+          target_prompt_version: number;
+          target_run_id: string;
+          target_snapshots: Json;
+          target_unmatched: Json;
+          target_workspace_id: string;
+        };
+        Returns: string;
       };
       persist_task_inference_result: {
         Args: {

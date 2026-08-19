@@ -24,6 +24,7 @@ describe('environment schemas', () => {
       ...browserEnvironment,
       AI_GATEWAY_API_KEY: 'gateway-key',
       REFLOW_ADMIN_EMAILS: 'analyst@example.com',
+      REFLOW_PROCESS_MINING_MODEL: 'openai/gpt-5-mini',
       REFLOW_TASK_INFERENCE_MODEL: 'openai/gpt-5-mini',
       SUPABASE_SECRET_KEY: 'secret-key',
     });
@@ -37,6 +38,7 @@ describe('environment schemas', () => {
         AI_GATEWAY_API_KEY: 'gateway-key',
         NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
         REFLOW_TASK_INFERENCE_MODEL: 'anthropic/claude-haiku-4.5',
+        REFLOW_PROCESS_MINING_MODEL: 'openai/gpt-5-mini',
         SUPABASE_SECRET_KEY: 'secret-key',
       }).REFLOW_TASK_INFERENCE_MODEL,
     ).toBe('anthropic/claude-haiku-4.5');

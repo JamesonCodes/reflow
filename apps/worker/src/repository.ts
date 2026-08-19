@@ -46,7 +46,7 @@ export class TaskInferenceRepository {
   async claim(workerIdentifier: string, batchSize = 5) {
     const { data, error } = await this.client.rpc('claim_processing_jobs', {
       batch_size: batchSize,
-      requested_job_types: ['task_inference'],
+      requested_job_types: ['task_inference', 'process_mining'],
       worker_identifier: workerIdentifier,
     });
     return requiredData(data, error);

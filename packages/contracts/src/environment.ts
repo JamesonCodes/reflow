@@ -18,6 +18,11 @@ export const workerEnvironmentSchema = z.object({
     .min(3)
     .max(160)
     .regex(/^[a-z0-9-]+\/[a-z0-9._-]+$/i),
+  REFLOW_PROCESS_MINING_MODEL: z
+    .string()
+    .min(3)
+    .max(160)
+    .regex(/^[a-z0-9-]+\/[a-z0-9._-]+$/i),
   SUPABASE_SECRET_KEY: z.string().min(1),
 });
 
@@ -25,6 +30,8 @@ export const trustedEnvironmentSchema = adminEnvironmentSchema.extend({
   AI_GATEWAY_API_KEY: z.string().min(1),
   REFLOW_TASK_INFERENCE_MODEL:
     workerEnvironmentSchema.shape.REFLOW_TASK_INFERENCE_MODEL,
+  REFLOW_PROCESS_MINING_MODEL:
+    workerEnvironmentSchema.shape.REFLOW_PROCESS_MINING_MODEL,
 });
 
 export type AdminEnvironment = z.infer<typeof adminEnvironmentSchema>;

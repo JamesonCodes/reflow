@@ -35,7 +35,7 @@ not added early unless the current phase requires a shared interface.
 | 2     | Study setup and user guidance         | Complete | `26864f1`      |
 | 3     | Privacy-safe browser observer         | Complete | `5cf61d1`      |
 | 4     | Step normalization and task inference | Complete | —              |
-| 5     | As-Is process mining                  | Planned  | —              |
+| 5     | As-Is process mining                  | Complete | —              |
 | 6     | Analysis and To-Be redesign           | Planned  | —              |
 | 7     | Export and portfolio hardening        | Planned  | —              |
 
@@ -287,7 +287,7 @@ from the original inference.
 
 ## Phase 5 — As-Is process mining
 
-**Status:** Planned
+**Status:** Complete
 
 ### Scope
 
@@ -336,7 +336,7 @@ evidence.
 - Analyst corrections preserve evidence.
 - Full workspace checks pass.
 
-### Planned commit
+### Delivery
 
 `feat: add as-is process mining`
 

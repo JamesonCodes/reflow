@@ -65,7 +65,7 @@ extension messaging, background memory, storage, logs, or Supabase requests.
 | 2     | Study setup and user guidance         | Complete |
 | 3     | Privacy-safe browser observer         | Complete |
 | 4     | Step normalization and task inference | Complete |
-| 5     | As-Is process mining                  | Planned  |
+| 5     | As-Is process mining                  | Complete |
 | 6     | Analysis and To-Be redesign           | Planned  |
 | 7     | Export and portfolio hardening        | Planned  |
 
@@ -139,6 +139,7 @@ SUPABASE_SECRET_KEY=your-secret-key
 REFLOW_ADMIN_EMAILS=you@example.com
 AI_GATEWAY_API_KEY=your-ai-gateway-key
 REFLOW_TASK_INFERENCE_MODEL=openai/gpt-5-mini
+REFLOW_PROCESS_MINING_MODEL=openai/gpt-5-mini
 ```
 
 The secret key and administrator allowlist are read only by trusted local
@@ -251,6 +252,20 @@ Analysts can rename, merge, split, or reject inferred tasks. Corrections are
 stored as immutable overlays; the original model inference and its source-event
 evidence remain unchanged.
 
+## Mine As-Is processes
+
+After at least two comparable process instances have been inferred, open
+**As-Is process mining**, select a department, and queue a mining run. Reflow
+uses the latest effective analyst-corrected tasks, deterministic evidence
+signatures, ordered sequence similarity, and structured Vercel AI Gateway
+boundaries to produce recurring candidates, exact variants, timing metrics,
+transition graphs, and evidence-backed findings.
+
+Single observations and unmatched task sequences remain visible as evidence but
+are not promoted to recurring processes. Analysts can rename, merge, split,
+confirm, or reject candidates through immutable correction overlays. Phase 6
+will consume confirmed effective candidates only.
+
 ## Development commands
 
 | Command             | Purpose                                               |
@@ -280,6 +295,7 @@ name `REFLOW_EMBEDDING_MODEL`.
 
 - [Architecture](docs/architecture.md)
 - [Incremental implementation roadmap](docs/roadmap.md)
+- [Future embedding support](docs/future-embeddings.md)
 
 ## License
 

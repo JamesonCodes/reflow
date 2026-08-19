@@ -1,8 +1,12 @@
 import {
+  processBoundaryOutputSchema,
+  processMiningPromptVersion,
   taskBoundaryReconciliationSchema,
   taskInferenceOutputSchema,
   taskInferencePromptVersion,
   type NormalizedStep,
+  type MiningTask,
+  type ProcessBoundaryOutput,
   type TaskBoundaryReconciliation,
   type TaskInferenceOutput,
 } from '@reflow/contracts';
@@ -177,3 +181,79 @@ export const aiGatewayBoundary = {
   provider: 'vercel-ai-gateway',
   structuredOutput: 'Output.object',
 } as const;
+
+export interface ProcessMiningRequest {
+  department: string;
+  role: string | null;
+  tasks: MiningTask[];
+}
+
+function promptForProcessBoundaries(request: ProcessMiningRequest) {
+  const evidence = request.tasks.map((task) => ({
+    ordinal: task.ordinal,
+    label: task.neutralLabel,
+    objective: task.apparentObjective,
+    systems: task.participatingSystems,
+    start: task.startedAt,
+    end: task.endedAt,
+    fingerprintSignals: task.featureTokens,
+  }));
+  return [
+    'Divide ordered browser business tasks into bounded process instances.',
+    'A process instance is a connected sequence producing a recognizable business outcome.',
+    'Separate back-to-back processes even when no idle gap exists.',
+    'Do not invent tasks, systems, outcomes, or evidence.',
+    'Every supplied task ordinal must appear exactly once in a process instance or excluded range.',
+    'A singleton is standalone_work unless the evidence clearly represents a complete recurring process shape.',
+    'Use neutral evidence-backed labels. Navigation mechanics are not business outcomes.',
+    'All supplied tasks belong to one hard activity segment; never refer to tasks outside it.',
+    `Department context: ${request.department}`,
+    `Role context: ${request.role ?? 'Unspecified'}`,
+    `Prompt version: ${processMiningPromptVersion}`,
+    `Effective tasks: ${JSON.stringify(evidence)}`,
+  ].join('\n');
+}
+
+async function generateProcessBoundariesThroughGateway(
+  configuration: TaskInferenceGatewayConfiguration,
+  prompt: string,
+) {
+  const gateway = createGateway({ apiKey: configuration.apiKey });
+  const result = await generateText({
+    model: gateway(configuration.model),
+    output: Output.object({
+      description: 'Evidence-backed process instance boundaries',
+      name: 'reflow_process_boundaries',
+      schema: processBoundaryOutputSchema,
+    }),
+    prompt,
+    providerOptions: {
+      gateway: {
+        tags: [
+          'reflow',
+          'process-mining',
+          `prompt-v${processMiningPromptVersion}`,
+        ],
+      },
+    },
+  });
+  return result.output;
+}
+
+export async function inferProcessBoundaries(
+  configuration: TaskInferenceGatewayConfiguration,
+  request: ProcessMiningRequest,
+  generate: StructuredTaskGenerator = generateProcessBoundariesThroughGateway,
+): Promise<ProcessBoundaryOutput> {
+  if (!configuration.apiKey) throw new Error('ai_gateway_key_required');
+  if (!configuration.model) throw new Error('process_mining_model_required');
+  if (request.tasks.length === 0)
+    return { excludedRanges: [], processInstances: [] };
+  const generated = await generate(
+    configuration,
+    promptForProcessBoundaries(request),
+  );
+  const parsed = processBoundaryOutputSchema.safeParse(generated);
+  if (!parsed.success) throw new Error('invalid_process_boundary_output');
+  return parsed.data;
+}

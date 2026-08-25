@@ -139,6 +139,37 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', 'd1000000-0000-4000-8000-000000000001', true);
 select set_config('request.jwt.claims', '{"sub":"d1000000-0000-4000-8000-000000000001","role":"authenticated","is_anonymous":false}', true);
 
+select public.enqueue_process_mining(
+  'd3000000-0000-4000-8000-000000000001'
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from public.processing_jobs
+    where workspace_id = 'd2000000-0000-4000-8000-000000000001'
+      and job_type = 'process_mining'
+      and entity_id = 'd3000000-0000-4000-8000-000000000001'
+      and status = 'queued'
+  ) then
+    raise exception 'authorized analyst could not queue process mining';
+  end if;
+
+  begin
+    insert into public.processing_jobs (workspace_id, job_type, entity_id)
+    values (
+      'd2000000-0000-4000-8000-000000000001',
+      'process_mining',
+      gen_random_uuid()
+    );
+    raise exception 'authenticated analyst unexpectedly inserted a job directly'
+      using errcode = 'ZX001';
+  exception when insufficient_privilege then null;
+  end;
+end;
+$$;
+
 select public.create_process_candidate_correction(
   'd2000000-0000-4000-8000-000000000001',
   'd8000000-0000-4000-8000-000000000001',
@@ -158,6 +189,19 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'd1000000-0000-4000-8000-000000000002', true);
 select set_config('request.jwt.claims', '{"sub":"d1000000-0000-4000-8000-000000000002","role":"authenticated","is_anonymous":false}', true);
+
+do $$
+begin
+  begin
+    perform public.enqueue_process_mining(
+      'd3000000-0000-4000-8000-000000000001'
+    );
+    raise exception 'cross-workspace user unexpectedly queued process mining'
+      using errcode = 'ZX001';
+  exception when insufficient_privilege then null;
+  end;
+end;
+$$;
 
 do $$
 begin

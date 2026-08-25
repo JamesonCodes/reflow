@@ -1,10 +1,10 @@
-import { inferProcessBoundaries } from '@reflow/ai';
+import { labelProcessCandidate } from '@reflow/ai';
 import {
   processMiningPromptVersion,
-  type ProcessBoundaryOutput,
+  type ProcessCandidateLabel,
 } from '@reflow/contracts';
 
-import { materializeProcessMining } from './process-mining';
+import { finalizeProcessMining, prepareProcessMining } from './process-mining';
 import type { ProcessMiningRepository } from './process-mining-repository';
 import type { ProcessingJob, TaskInferenceRepository } from './repository';
 
@@ -14,20 +14,12 @@ export interface ProcessMiningConfiguration {
 }
 
 export interface ProcessMiningDependencies {
-  infer?: typeof inferProcessBoundaries;
+  label?: typeof labelProcessCandidate;
   repository: Pick<
     ProcessMiningRepository,
     'loadEffectiveTasks' | 'miningExists' | 'persist'
   >;
   jobs: Pick<TaskInferenceRepository, 'complete'>;
-}
-
-function groupBy<T>(values: T[], keyFor: (value: T) => string) {
-  const groups = new Map<string, T[]>();
-  for (const value of values) {
-    groups.set(keyFor(value), [...(groups.get(keyFor(value)) ?? []), value]);
-  }
-  return groups;
 }
 
 export async function processMiningJob(
@@ -36,30 +28,28 @@ export async function processMiningJob(
   dependencies: ProcessMiningDependencies,
 ) {
   const input = await dependencies.repository.loadEffectiveTasks(job.entity_id);
-  const grouped = groupBy(
-    input.tasks,
-    (task) => `${task.observationWindowId}:${task.hardSegmentOrdinal}`,
-  );
-  const infer = dependencies.infer ?? inferProcessBoundaries;
-  const outputs = new Map<string, ProcessBoundaryOutput>();
-  for (const [segmentKey, tasks] of grouped) {
-    outputs.set(
-      segmentKey,
-      await infer(
+  const draft = prepareProcessMining(input.tasks, configuration.model);
+  const label = dependencies.label ?? labelProcessCandidate;
+  const labels = new Map<string, ProcessCandidateLabel>();
+  for (const candidate of draft.candidates) {
+    labels.set(
+      candidate.id,
+      await label(
         { apiKey: configuration.apiKey, model: configuration.model },
         {
-          department: tasks[0]!.department,
-          role: tasks[0]!.role,
-          tasks,
+          department: candidate.representativeRange.tasks[0]!.department,
+          representativeTasks: candidate.representativeRange.tasks,
+          role: candidate.representativeRange.tasks[0]!.role,
+          supportingRanges: candidate.completeRanges.map((range) => ({
+            observationWindowId: range.observationWindowId,
+            systems: range.fingerprint.systems,
+            taskLabels: range.tasks.map((task) => task.neutralLabel),
+          })),
         },
       ),
     );
   }
-  const result = materializeProcessMining(
-    input.tasks,
-    outputs,
-    configuration.model,
-  );
+  const result = finalizeProcessMining(draft, labels);
   if (!(await dependencies.repository.miningExists(result.runId)))
     await dependencies.repository.persist(
       job,

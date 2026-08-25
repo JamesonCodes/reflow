@@ -4,8 +4,8 @@ import { capturedHostnameSchema } from './observation';
 
 const boundedText = (maximum: number) => z.string().trim().min(1).max(maximum);
 
-export const processMiningAlgorithmVersion = 1 as const;
-export const processMiningPromptVersion = 1 as const;
+export const processMiningAlgorithmVersion = 2 as const;
+export const processMiningPromptVersion = 2 as const;
 
 export const miningTaskSchema = z.strictObject({
   id: z.uuid(),
@@ -48,6 +48,39 @@ export const processBoundaryExclusionSchema = z.strictObject({
 export const processBoundaryOutputSchema = z.strictObject({
   processInstances: z.array(processBoundaryInstanceSchema).max(200),
   excludedRanges: z.array(processBoundaryExclusionSchema).max(200),
+});
+
+export const processInstanceDispositionSchema = z.enum([
+  'complete_match',
+  'partial_fragment',
+  'non_recurring',
+  'uncertain',
+  'legacy_unclassified',
+]);
+
+export const processMatchDiagnosticsSchema = z.strictObject({
+  actionScore: z.number().min(0).max(1),
+  completionCompatible: z.boolean(),
+  compositeScore: z.number().min(0).max(1),
+  containmentScore: z.number().min(0).max(1),
+  inputScore: z.number().min(0).max(1),
+  labelScore: z.number().min(0).max(1),
+  pathScore: z.number().min(0).max(1),
+  systemSequenceScore: z.number().min(0).max(1),
+});
+
+export const processVariantSchema = z.strictObject({
+  canonicalClusterSequence: z.array(z.string().regex(/^[a-f0-9]{64}$/)).min(1),
+  instanceIds: z.array(z.uuid()).min(1),
+  representativeInstanceId: z.uuid(),
+  variantKey: z.string().regex(/^[a-f0-9]{64}$/),
+});
+
+export const processCandidateLabelSchema = z.strictObject({
+  apparentOutcome: boundedText(400),
+  confidence: z.number().min(0).max(1),
+  evidenceRationale: boundedText(500),
+  neutralLabel: boundedText(140),
 });
 
 export const processMetricsSchema = z.strictObject({
@@ -98,11 +131,14 @@ export const processCandidateSchema = z.strictObject({
   candidateKey: z.string().regex(/^[a-f0-9]{64}$/),
   neutralLabel: boundedText(140),
   apparentOutcome: boundedText(400),
+  evidenceRationale: boundedText(500),
   confidence: z.number().min(0).max(1),
+  scope: z.literal('primary'),
   participatingSystems: z.array(capturedHostnameSchema).min(1).max(20),
   instanceIds: z.array(z.uuid()).min(2),
   canonicalClusterSequence: z.array(z.string().regex(/^[a-f0-9]{64}$/)).min(1),
   variantCount: z.number().int().positive(),
+  variants: z.array(processVariantSchema).min(1),
   metrics: processMetricsSchema,
   graphEdges: z.array(processGraphEdgeSchema),
   findings: z.array(processFindingSchema),
@@ -158,7 +194,14 @@ export const processCandidateCorrectionInputSchema = z
 export type MiningTask = z.infer<typeof miningTaskSchema>;
 export type ProcessBoundaryOutput = z.infer<typeof processBoundaryOutputSchema>;
 export type ProcessCandidate = z.infer<typeof processCandidateSchema>;
+export type ProcessCandidateLabel = z.infer<typeof processCandidateLabelSchema>;
 export type ProcessFinding = z.infer<typeof processFindingSchema>;
+export type ProcessInstanceDisposition = z.infer<
+  typeof processInstanceDispositionSchema
+>;
+export type ProcessMatchDiagnostics = z.infer<
+  typeof processMatchDiagnosticsSchema
+>;
 export type ProcessCandidateCorrectionInput = z.infer<
   typeof processCandidateCorrectionInputSchema
 >;

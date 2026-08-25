@@ -5,6 +5,7 @@ import type { MiningTask, NormalizedStep } from '@reflow/contracts';
 import {
   inferBrowserTasks,
   inferProcessBoundaries,
+  labelProcessCandidate,
   reconcileTaskBoundary,
 } from './index';
 
@@ -116,6 +117,58 @@ describe('Vercel AI Gateway task inference adapter', () => {
 });
 
 describe('Vercel AI Gateway process mining adapter', () => {
+  it('labels a deterministic candidate without changing its evidence', async () => {
+    const task: MiningTask = {
+      apparentObjective: 'Validate an invoice and submit payment',
+      confidence: 0.9,
+      department: 'Accounts Payable',
+      departmentId: '10000000-0000-4000-8000-000000000010',
+      endedAt: '2026-08-12T10:01:00.000Z',
+      endStepOrdinal: 5,
+      featureTokens: ['action:submit'],
+      hardSegmentOrdinal: 1,
+      id: '10000000-0000-4000-8000-000000000011',
+      neutralLabel: 'Validate invoice',
+      observationWindowId: '10000000-0000-4000-8000-000000000012',
+      ordinal: 1,
+      participatingSystems: ['ap.localhost'],
+      role: 'Analyst',
+      sourceCorrectionId: null,
+      sourceTaskInstanceIds: ['10000000-0000-4000-8000-000000000013'],
+      startedAt: '2026-08-12T10:00:00.000Z',
+      startStepOrdinal: 1,
+      workspaceId: '10000000-0000-4000-8000-000000000014',
+    };
+    await expect(
+      labelProcessCandidate(
+        configuration,
+        {
+          department: task.department,
+          representativeTasks: [task],
+          role: task.role,
+          supportingRanges: [
+            {
+              observationWindowId: task.observationWindowId,
+              systems: task.participatingSystems,
+              taskLabels: [task.neutralLabel],
+            },
+          ],
+        },
+        (_config, prompt) => {
+          expect(prompt).toContain('may not change its boundaries');
+          return Promise.resolve({
+            apparentOutcome: 'Invoice validated and payment submitted',
+            confidence: 0.9,
+            evidenceRationale: 'The evidence contains both outcomes.',
+            neutralLabel: 'Review invoice and submit payment',
+          });
+        },
+      ),
+    ).resolves.toMatchObject({
+      neutralLabel: 'Review invoice and submit payment',
+    });
+  });
+
   it('validates complete process boundary output', async () => {
     const task: MiningTask = {
       apparentObjective: 'Validate an invoice',

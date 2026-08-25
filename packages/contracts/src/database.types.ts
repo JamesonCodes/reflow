@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.15';
+    PostgrestVersion: '14.17';
   };
   public: {
     Tables: {
@@ -655,6 +655,7 @@ export type Database = {
           canonical_cluster_sequence: string[];
           confidence: number;
           created_at: string;
+          evidence_rationale: string;
           id: string;
           instance_count: number;
           metrics: Json;
@@ -662,6 +663,7 @@ export type Database = {
           neutral_label: string;
           observation_count: number;
           participating_systems: string[];
+          scope: string;
           variant_count: number;
           workspace_id: string;
         };
@@ -671,6 +673,7 @@ export type Database = {
           canonical_cluster_sequence: string[];
           confidence: number;
           created_at?: string;
+          evidence_rationale?: string;
           id: string;
           instance_count: number;
           metrics: Json;
@@ -678,6 +681,7 @@ export type Database = {
           neutral_label: string;
           observation_count: number;
           participating_systems: string[];
+          scope?: string;
           variant_count: number;
           workspace_id: string;
         };
@@ -687,6 +691,7 @@ export type Database = {
           canonical_cluster_sequence?: string[];
           confidence?: number;
           created_at?: string;
+          evidence_rationale?: string;
           id?: string;
           instance_count?: number;
           metrics?: Json;
@@ -694,6 +699,7 @@ export type Database = {
           neutral_label?: string;
           observation_count?: number;
           participating_systems?: string[];
+          scope?: string;
           variant_count?: number;
           workspace_id?: string;
         };
@@ -798,12 +804,16 @@ export type Database = {
           confidence: number;
           created_at: string;
           department_snapshot: string;
+          disposition: string;
           duration_seconds: number;
           ended_at: string;
           id: string;
+          match_diagnostics: Json;
           mining_run_id: string;
           neutral_label: string;
           observation_window_id: string;
+          range_fingerprint: string;
+          related_candidate_key: string | null;
           role_snapshot: string | null;
           started_at: string;
           task_snapshot_ids: string[];
@@ -816,12 +826,16 @@ export type Database = {
           confidence: number;
           created_at?: string;
           department_snapshot: string;
+          disposition?: string;
           duration_seconds: number;
           ended_at: string;
           id: string;
+          match_diagnostics?: Json;
           mining_run_id: string;
           neutral_label: string;
           observation_window_id: string;
+          range_fingerprint?: string;
+          related_candidate_key?: string | null;
           role_snapshot?: string | null;
           started_at: string;
           task_snapshot_ids: string[];
@@ -834,12 +848,16 @@ export type Database = {
           confidence?: number;
           created_at?: string;
           department_snapshot?: string;
+          disposition?: string;
           duration_seconds?: number;
           ended_at?: string;
           id?: string;
+          match_diagnostics?: Json;
           mining_run_id?: string;
           neutral_label?: string;
           observation_window_id?: string;
+          range_fingerprint?: string;
+          related_candidate_key?: string | null;
           role_snapshot?: string | null;
           started_at?: string;
           task_snapshot_ids?: string[];
@@ -2068,6 +2086,22 @@ export type Database = {
         };
       };
       persist_process_mining_result: {
+        Args: {
+          target_algorithm_version: number;
+          target_candidates: Json;
+          target_department_id: string;
+          target_input_digest: string;
+          target_instances: Json;
+          target_model: string;
+          target_prompt_version: number;
+          target_run_id: string;
+          target_snapshots: Json;
+          target_unmatched: Json;
+          target_workspace_id: string;
+        };
+        Returns: string;
+      };
+      persist_process_mining_result_v2: {
         Args: {
           target_algorithm_version: number;
           target_candidates: Json;

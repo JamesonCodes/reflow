@@ -65,13 +65,23 @@ model evidence.
 
 Phase 5 selects the latest successful inference for every completed observation
 in a department, applies analyst task corrections, and freezes those effective
-tasks into a versioned mining run. Deterministic structured-evidence similarity
-forms task clusters. Gateway structured output separates back-to-back process
-instances inside each five-minute-bounded activity segment, while exact coverage
-validation prevents invented or dropped tasks. Ordered sequence similarity then
-promotes only groups with at least two observed instances to recurring process
-candidates. Metrics, graph edges, variants, and findings are calculated
-deterministically and retain observation provenance.
+tasks into a versioned mining run. The Phase 5A miner enumerates contiguous task
+ranges only inside each observation and five-minute-bounded activity segment.
+It compares ordered browser systems, normalized paths, action types, semantic
+input tokens, and generalized labels to find the longest recurring process
+envelope. A task may be split differently between observations without creating
+a false variant, because process membership and variants are based on the
+underlying behavioral evidence rather than model labels or task boundaries.
+
+Only validated ranges with at least two complete observations become primary
+process candidates. Shorter contained ranges are retained as partial supporting
+evidence, while isolated or inconclusive ranges are explicitly marked as not
+promoted. Vercel AI Gateway labels a completed deterministic candidate, but it
+cannot change its boundaries, membership, systems, or evidence. Metrics, graph
+edges, variants, and findings are calculated deterministically and retain
+observation provenance. Persistence validates exact task coverage in one
+transaction, so a failed model response or invalid result cannot leave a partial
+mining run.
 
 ## Phase 4 data flow
 
@@ -90,15 +100,16 @@ raw_event_tokens
 ```text
 latest task_inference_runs + task_corrections
   -> process_mining_runs + process_task_snapshots
-  -> process_instances + process_unmatched_work
+  -> contiguous evidence ranges + behavioral fingerprints
+  -> process_instances (complete, partial, non-recurring, uncertain)
   -> process_candidates + process_candidate_instances
   -> process_variants + process_graph_edges + process_findings
   -> process_candidate_corrections + correction sources
 ```
 
-Original task inference and process mining results remain immutable. Analyst
-decisions resolve into an effective candidate projection; confirmed candidates
-are the only Phase 6 redesign inputs.
+Original task inference and versioned process mining results remain immutable.
+Analyst decisions resolve into an effective candidate projection; confirmed
+candidates are the only Phase 6 redesign inputs.
 
 Raw events remain immutable. Every derived task retains ordered links to its
 normalized steps, and every normalized step retains links to its sanitized

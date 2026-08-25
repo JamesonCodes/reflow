@@ -90,6 +90,74 @@ select public.persist_process_mining_result(
   '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb
 );
 
+select public.persist_process_mining_result_v2(
+  'e8000000-0000-4000-8000-000000000002',
+  'd2000000-0000-4000-8000-000000000001',
+  'd3000000-0000-4000-8000-000000000001',
+  repeat('e', 64), 'openai/gpt-5-mini', 2, 2,
+  '[
+    {"id":"e9000000-0000-4000-8000-000000000001","observation_window_id":"d5000000-0000-4000-8000-000000000001","department":"Accounts Payable","role":"Analyst","ordinal":1,"hard_segment_ordinal":1,"neutral_label":"Pay invoice","apparent_objective":"Validate and pay an invoice","participating_systems":["ap.localhost"],"start_step_ordinal":1,"end_step_ordinal":3,"started_at":"2026-08-19T10:00:00Z","ended_at":"2026-08-19T10:02:00Z","confidence":0.9,"feature_signature":"3333333333333333333333333333333333333333333333333333333333333333","cluster_key":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","feature_tokens":["action:submit"],"source_correction_id":null,"source_task_instance_ids":["d7000000-0000-4000-8000-000000000001"]},
+    {"id":"e9000000-0000-4000-8000-000000000002","observation_window_id":"d5000000-0000-4000-8000-000000000002","department":"Accounts Payable","role":"Analyst","ordinal":1,"hard_segment_ordinal":1,"neutral_label":"Pay invoice","apparent_objective":"Validate and pay an invoice","participating_systems":["ap.localhost"],"start_step_ordinal":1,"end_step_ordinal":3,"started_at":"2026-08-19T11:00:00Z","ended_at":"2026-08-19T11:02:00Z","confidence":0.9,"feature_signature":"4444444444444444444444444444444444444444444444444444444444444444","cluster_key":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","feature_tokens":["action:submit"],"source_correction_id":null,"source_task_instance_ids":["d7000000-0000-4000-8000-000000000002"]}
+  ]'::jsonb,
+  '[
+    {"id":"ea000000-0000-4000-8000-000000000001","observation_window_id":"d5000000-0000-4000-8000-000000000001","neutral_label":"Invoice payment","apparent_outcome":"Invoice submitted for payment","boundary_rationale":"Recurring evidence range.","confidence":0.9,"started_at":"2026-08-19T10:00:00Z","ended_at":"2026-08-19T10:02:00Z","duration_seconds":120,"cluster_sequence":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"task_snapshot_ids":["e9000000-0000-4000-8000-000000000001"],"department":"Accounts Payable","role":"Analyst","disposition":"complete_match","range_fingerprint":"5555555555555555555555555555555555555555555555555555555555555555","related_candidate_key":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","match_diagnostics":{"actionScore":1,"completionCompatible":true,"compositeScore":1,"containmentScore":1,"inputScore":1,"labelScore":1,"pathScore":1,"systemSequenceScore":1}},
+    {"id":"ea000000-0000-4000-8000-000000000002","observation_window_id":"d5000000-0000-4000-8000-000000000002","neutral_label":"Invoice payment","apparent_outcome":"Invoice submitted for payment","boundary_rationale":"Recurring evidence range.","confidence":0.9,"started_at":"2026-08-19T11:00:00Z","ended_at":"2026-08-19T11:02:00Z","duration_seconds":120,"cluster_sequence":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"task_snapshot_ids":["e9000000-0000-4000-8000-000000000002"],"department":"Accounts Payable","role":"Analyst","disposition":"complete_match","range_fingerprint":"6666666666666666666666666666666666666666666666666666666666666666","related_candidate_key":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","match_diagnostics":{"actionScore":1,"completionCompatible":true,"compositeScore":0.9,"containmentScore":1,"inputScore":1,"labelScore":1,"pathScore":1,"systemSequenceScore":1}}
+  ]'::jsonb,
+  '[]'::jsonb,
+  '[{
+    "id":"eb000000-0000-4000-8000-000000000001",
+    "candidate_key":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "neutral_label":"Invoice payment","apparent_outcome":"Invoice submitted for payment","evidence_rationale":"Two complete evidence ranges recur.","confidence":0.9,"scope":"primary",
+    "participating_systems":["ap.localhost"],
+    "canonical_cluster_sequence":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
+    "instance_ids":["ea000000-0000-4000-8000-000000000001","ea000000-0000-4000-8000-000000000002"],
+    "variant_count":1,
+    "variants":[{"variant_key":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","canonical_cluster_sequence":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"instance_ids":["ea000000-0000-4000-8000-000000000001","ea000000-0000-4000-8000-000000000002"],"representative_instance_id":"ea000000-0000-4000-8000-000000000001"}],
+    "metrics":{"observationCount":2},"graph_edges":[],"findings":[]
+  }]'::jsonb
+);
+
+do $$
+begin
+  if (select count(*) from public.process_instances where mining_run_id = 'e8000000-0000-4000-8000-000000000002' and disposition = 'complete_match') <> 2 then
+    raise exception 'Phase 5A complete process dispositions were not persisted';
+  end if;
+  if (select count(*) from public.process_variants where process_candidate_id = 'eb000000-0000-4000-8000-000000000001') <> 1 then
+    raise exception 'split task boundaries incorrectly created extra behavioral variants';
+  end if;
+  if not exists (
+    select 1 from public.process_candidates
+    where id = 'eb000000-0000-4000-8000-000000000001'
+      and scope = 'primary'
+      and evidence_rationale = 'Two complete evidence ranges recur.'
+  ) then raise exception 'Phase 5A candidate diagnostics were not persisted'; end if;
+end;
+$$;
+
+do $$
+begin
+  begin
+    perform public.persist_process_mining_result_v2(
+      'ec000000-0000-4000-8000-000000000001',
+      'd2000000-0000-4000-8000-000000000001',
+      'd3000000-0000-4000-8000-000000000001',
+      repeat('9', 64), 'openai/gpt-5-mini', 2, 2,
+      '[
+        {"id":"ed000000-0000-4000-8000-000000000001","observation_window_id":"d5000000-0000-4000-8000-000000000001","department":"Accounts Payable","role":"Analyst","ordinal":1,"hard_segment_ordinal":1,"neutral_label":"One","apparent_objective":"One","participating_systems":["ap.localhost"],"start_step_ordinal":1,"end_step_ordinal":1,"started_at":"2026-08-19T10:00:00Z","ended_at":"2026-08-19T10:01:00Z","confidence":0.5,"feature_signature":"7777777777777777777777777777777777777777777777777777777777777777","cluster_key":"8888888888888888888888888888888888888888888888888888888888888888","feature_tokens":["action:submit"],"source_correction_id":null,"source_task_instance_ids":["d7000000-0000-4000-8000-000000000001"]},
+        {"id":"ed000000-0000-4000-8000-000000000002","observation_window_id":"d5000000-0000-4000-8000-000000000001","department":"Accounts Payable","role":"Analyst","ordinal":2,"hard_segment_ordinal":1,"neutral_label":"Two","apparent_objective":"Two","participating_systems":["ap.localhost"],"start_step_ordinal":2,"end_step_ordinal":2,"started_at":"2026-08-19T10:01:00Z","ended_at":"2026-08-19T10:02:00Z","confidence":0.5,"feature_signature":"9999999999999999999999999999999999999999999999999999999999999999","cluster_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","feature_tokens":["action:submit"],"source_correction_id":null,"source_task_instance_ids":["d7000000-0000-4000-8000-000000000001"]}
+      ]'::jsonb,
+      '[{"id":"ee000000-0000-4000-8000-000000000001","observation_window_id":"d5000000-0000-4000-8000-000000000001","neutral_label":"Incomplete","apparent_outcome":"Incomplete","boundary_rationale":"Deliberately incomplete coverage.","confidence":0.5,"started_at":"2026-08-19T10:00:00Z","ended_at":"2026-08-19T10:01:00Z","duration_seconds":60,"cluster_sequence":["8888888888888888888888888888888888888888888888888888888888888888"],"task_snapshot_ids":["ed000000-0000-4000-8000-000000000001"],"department":"Accounts Payable","role":"Analyst","disposition":"non_recurring","range_fingerprint":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","related_candidate_key":null,"match_diagnostics":{}}]'::jsonb,
+      '[]'::jsonb, '[]'::jsonb
+    );
+    raise exception 'incomplete Phase 5A evidence unexpectedly persisted' using errcode = 'ZX001';
+  exception when sqlstate '22023' then null;
+  end;
+  if exists (select 1 from public.process_mining_runs where id = 'ec000000-0000-4000-8000-000000000001') then
+    raise exception 'invalid Phase 5A result left a partial mining run';
+  end if;
+end;
+$$;
+
 do $$
 begin
   begin
@@ -119,7 +187,13 @@ begin
   if (select count(*) from public.process_candidates where mining_run_id = 'd8000000-0000-4000-8000-000000000001') <> 1 then
     raise exception 'recurring candidate was not persisted exactly once';
   end if;
-  if (select count(*) from public.process_variants) <> 1 then
+  if (
+    select count(*)
+    from public.process_variants as variant
+    join public.process_candidates as candidate
+      on candidate.id = variant.process_candidate_id
+    where candidate.mining_run_id = 'd8000000-0000-4000-8000-000000000001'
+  ) <> 1 then
     raise exception 'exact process variant was not persisted';
   end if;
   if exists (
@@ -164,6 +238,23 @@ begin
       gen_random_uuid()
     );
     raise exception 'authenticated analyst unexpectedly inserted a job directly'
+      using errcode = 'ZX001';
+  exception when insufficient_privilege then null;
+  end;
+end;
+$$;
+
+do $$
+begin
+  begin
+    perform public.persist_process_mining_result_v2(
+      gen_random_uuid(),
+      'd2000000-0000-4000-8000-000000000001',
+      'd3000000-0000-4000-8000-000000000001',
+      repeat('0', 64), 'openai/gpt-5-mini', 2, 2,
+      '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb
+    );
+    raise exception 'authenticated user unexpectedly persisted Phase 5A data'
       using errcode = 'ZX001';
   exception when insufficient_privilege then null;
   end;

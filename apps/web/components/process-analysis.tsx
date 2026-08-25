@@ -19,6 +19,7 @@ type Candidate = Tables<'process_candidates'>;
 type ProcessInstance = Tables<'process_instances'>;
 type CandidateMember = Tables<'process_candidate_instances'>;
 type Finding = Tables<'process_findings'>;
+type TaskSnapshot = Tables<'process_task_snapshots'>;
 type Correction = Tables<'process_candidate_corrections'>;
 type CorrectionSource = Tables<'process_candidate_correction_sources'>;
 
@@ -27,6 +28,14 @@ function objectMetric(metrics: Json, key: string) {
     return 0;
   const value = metrics[key];
   return typeof value === 'number' ? value : 0;
+}
+
+function diagnosticMetric(diagnostics: Json, key: string) {
+  return objectMetric(diagnostics, key);
+}
+
+function formatSystem(hostname: string) {
+  return hostname.replace(/\.localhost$/, '').toUpperCase();
 }
 
 export function ProcessAnalysisPanel({
@@ -44,6 +53,7 @@ export function ProcessAnalysisPanel({
   const [instances, setInstances] = useState<ProcessInstance[]>([]);
   const [members, setMembers] = useState<CandidateMember[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
+  const [taskSnapshots, setTaskSnapshots] = useState<TaskSnapshot[]>([]);
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const [correctionSources, setCorrectionSources] = useState<
     CorrectionSource[]
@@ -103,11 +113,12 @@ export function ProcessAnalysisPanel({
       setInstances([]);
       setMembers([]);
       setFindings([]);
+      setTaskSnapshots([]);
       setCorrections([]);
       setCorrectionSources([]);
       return;
     }
-    const [candidateResult, instanceResult, correctionResult] =
+    const [candidateResult, instanceResult, snapshotResult, correctionResult] =
       await Promise.all([
         supabase
           .from('process_candidates')
@@ -120,6 +131,11 @@ export function ProcessAnalysisPanel({
           .eq('mining_run_id', latestRun.id)
           .order('started_at'),
         supabase
+          .from('process_task_snapshots')
+          .select('*')
+          .eq('mining_run_id', latestRun.id)
+          .order('started_at'),
+        supabase
           .from('process_candidate_corrections')
           .select('*')
           .eq('mining_run_id', latestRun.id)
@@ -128,6 +144,7 @@ export function ProcessAnalysisPanel({
     const failure = [
       candidateResult.error,
       instanceResult.error,
+      snapshotResult.error,
       correctionResult.error,
     ].find(Boolean);
     if (failure) return setError(failure.message);
@@ -168,6 +185,7 @@ export function ProcessAnalysisPanel({
     setInstances(instanceResult.data ?? []);
     setMembers(memberResult.data ?? []);
     setFindings(findingResult.data ?? []);
+    setTaskSnapshots(snapshotResult.data ?? []);
     setCorrections(correctionResult.data ?? []);
     setCorrectionSources(sourceResult.data ?? []);
   }, [latestRun, supabase]);
@@ -277,6 +295,12 @@ export function ProcessAnalysisPanel({
       ),
     [candidates, correctionSources, corrections, members],
   );
+  const partialInstances = instances.filter(
+    (instance) => instance.disposition === 'partial_fragment',
+  );
+  const unpromotedInstances = instances.filter((instance) =>
+    ['non_recurring', 'uncertain'].includes(instance.disposition),
+  );
 
   return (
     <section className="card setup-section" id="process-analysis">
@@ -319,8 +343,15 @@ export function ProcessAnalysisPanel({
       {latestRun ? (
         <p className="muted-copy">
           Latest run: {latestRun.task_snapshot_count} effective tasks ·{' '}
-          {latestRun.process_instance_count} process instances ·{' '}
-          {latestRun.process_candidate_count} recurring candidates
+          {effectiveResolution.candidates.length} primary process{' '}
+          {effectiveResolution.candidates.length === 1 ? '' : 'es'} ·{' '}
+          {
+            instances.filter(
+              (instance) => instance.disposition === 'complete_match',
+            ).length
+          }{' '}
+          complete observations · {partialInstances.length} partial
+          {partialInstances.length === 1 ? '' : 's'}
         </p>
       ) : (
         <p className="muted-copy">
@@ -341,10 +372,38 @@ export function ProcessAnalysisPanel({
           const candidateFindings = findings.filter((finding) =>
             candidate.sourceCandidateIds.includes(finding.process_candidate_id),
           );
+          const sourceKeys = candidates
+            .filter((source) =>
+              candidate.sourceCandidateIds.includes(source.id),
+            )
+            .map((source) => source.candidate_key);
+          const candidatePartials = partialInstances.filter(
+            (instance) =>
+              instance.related_candidate_key &&
+              sourceKeys.includes(instance.related_candidate_key),
+          );
+          const representativeInstance = candidateInstances.reduce<
+            ProcessInstance | undefined
+          >(
+            (current, instance) =>
+              !current ||
+              instance.task_snapshot_ids.length >
+                current.task_snapshot_ids.length
+                ? instance
+                : current,
+            undefined,
+          );
+          const canonicalSnapshots =
+            representativeInstance?.task_snapshot_ids
+              .map((id) => taskSnapshots.find((snapshot) => snapshot.id === id))
+              .filter((snapshot): snapshot is TaskSnapshot =>
+                Boolean(snapshot),
+              ) ?? [];
           return (
             <article className="process-candidate" key={candidate.effectiveId}>
               <label className="process-title">
                 <input
+                  className="selection-checkbox"
                   checked={candidate.sourceCandidateIds.every((id) =>
                     selectedCandidates.includes(id),
                   )}
@@ -372,6 +431,10 @@ export function ProcessAnalysisPanel({
                 </span>
               </label>
               <p>{candidate.apparentOutcome}</p>
+              <p className="evidence-rationale">
+                <strong>Why Reflow grouped this:</strong>{' '}
+                {sourceCandidate.evidence_rationale}
+              </p>
               <div className="metric-strip">
                 <span>
                   Median{' '}
@@ -390,14 +453,38 @@ export function ProcessAnalysisPanel({
                   )}
                   s
                 </span>
-                <span>{candidate.participatingSystems.join(' → ')}</span>
+                <span>
+                  {candidate.participatingSystems.map(formatSystem).join(' → ')}
+                </span>
+              </div>
+              <div className="canonical-process">
+                <h3>Canonical observed process</h3>
+                <ol>
+                  {canonicalSnapshots.map((snapshot, index) => (
+                    <li key={snapshot.id}>
+                      <span>{index + 1}</span>
+                      <div>
+                        <strong>{snapshot.neutral_label}</strong>
+                        <small>
+                          {snapshot.participating_systems
+                            .map(formatSystem)
+                            .join(' → ')}
+                        </small>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </div>
               <details>
-                <summary>Evidence and analyst review</summary>
+                <summary>
+                  Supporting evidence ({candidateInstances.length} complete ·{' '}
+                  {candidatePartials.length} partial)
+                </summary>
                 <div className="instance-list">
                   {candidateInstances.map((instance) => (
                     <label key={instance.id}>
                       <input
+                        className="selection-checkbox"
                         checked={selectedInstances.includes(instance.id)}
                         onChange={(event) =>
                           setSelectedInstances((current) =>
@@ -409,10 +496,35 @@ export function ProcessAnalysisPanel({
                         type="checkbox"
                       />
                       {new Date(instance.started_at).toLocaleString()} ·{' '}
-                      {Math.round(Number(instance.duration_seconds))}s
+                      {Math.round(Number(instance.duration_seconds))}s ·
+                      complete
                     </label>
                   ))}
                 </div>
+                {candidatePartials.length ? (
+                  <div className="partial-evidence">
+                    <strong>Partial supporting evidence</strong>
+                    <ul>
+                      {candidatePartials.map((instance) => (
+                        <li key={instance.id}>
+                          {new Date(instance.started_at).toLocaleString()} ·{' '}
+                          {instance.task_snapshot_ids.length} observed stage
+                          {instance.task_snapshot_ids.length === 1
+                            ? ''
+                            : 's'} ·{' '}
+                          {Math.round(
+                            diagnosticMetric(
+                              instance.match_diagnostics,
+                              'containmentScore',
+                            ) * 100,
+                          )}
+                          % evidence overlap. This observation supports the
+                          process but is not counted as a complete occurrence.
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 {candidateFindings.length ? (
                   <ul>
                     {candidateFindings.map((finding) => (
@@ -429,6 +541,26 @@ export function ProcessAnalysisPanel({
           );
         })}
       </div>
+      {unpromotedInstances.length ? (
+        <details className="unpromoted-processes">
+          <summary>
+            Not promoted ({unpromotedInstances.length} isolated activity
+            {unpromotedInstances.length === 1 ? '' : ' ranges'})
+          </summary>
+          <ul>
+            {unpromotedInstances.map((instance) => (
+              <li key={instance.id}>
+                <strong>{instance.neutral_label}</strong> ·{' '}
+                {instance.task_snapshot_ids.length} observed task
+                {instance.task_snapshot_ids.length === 1 ? '' : 's'} ·{' '}
+                {instance.disposition === 'uncertain'
+                  ? 'similarity was inconclusive'
+                  : 'not observed often enough to establish a recurring process'}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {effectiveResolution.rejectedSourceCandidateIds.length ? (
         <p className="muted-copy">
           {effectiveResolution.rejectedSourceCandidateIds.length} mined

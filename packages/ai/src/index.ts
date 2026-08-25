@@ -1,5 +1,6 @@
 import {
   processBoundaryOutputSchema,
+  processCandidateLabelSchema,
   processMiningPromptVersion,
   taskBoundaryReconciliationSchema,
   taskInferenceOutputSchema,
@@ -7,6 +8,7 @@ import {
   type NormalizedStep,
   type MiningTask,
   type ProcessBoundaryOutput,
+  type ProcessCandidateLabel,
   type TaskBoundaryReconciliation,
   type TaskInferenceOutput,
 } from '@reflow/contracts';
@@ -255,5 +257,81 @@ export async function inferProcessBoundaries(
   );
   const parsed = processBoundaryOutputSchema.safeParse(generated);
   if (!parsed.success) throw new Error('invalid_process_boundary_output');
+  return parsed.data;
+}
+
+export interface ProcessCandidateLabelRequest {
+  department: string;
+  representativeTasks: MiningTask[];
+  role: string | null;
+  supportingRanges: Array<{
+    observationWindowId: string;
+    taskLabels: string[];
+    systems: string[];
+  }>;
+}
+
+function promptForProcessCandidateLabel(request: ProcessCandidateLabelRequest) {
+  const representative = request.representativeTasks.map((task) => ({
+    label: task.neutralLabel,
+    objective: task.apparentObjective,
+    ordinal: task.ordinal,
+    systems: task.participatingSystems,
+  }));
+  return [
+    'Name one recurring browser process whose evidence ranges have already been validated deterministically.',
+    'You may label and summarize the supplied process, but you may not change its boundaries, membership, systems, tasks, or evidence.',
+    'Describe the complete business outcome, not an individual click, page, or browser mechanic.',
+    'Use a neutral concise process label and an evidence-bounded rationale.',
+    'Do not claim approvals, completion, savings, compliance, or automation unless the supplied evidence explicitly supports it.',
+    `Department context: ${request.department}`,
+    `Role context: ${request.role ?? 'Unspecified'}`,
+    `Prompt version: ${processMiningPromptVersion}`,
+    `Representative ordered tasks: ${JSON.stringify(representative)}`,
+    `Supporting observed ranges: ${JSON.stringify(request.supportingRanges)}`,
+  ].join('\n');
+}
+
+async function labelProcessCandidateThroughGateway(
+  configuration: TaskInferenceGatewayConfiguration,
+  prompt: string,
+) {
+  const gateway = createGateway({ apiKey: configuration.apiKey });
+  const result = await generateText({
+    model: gateway(configuration.model),
+    output: Output.object({
+      description: 'Evidence-bounded recurring browser process label',
+      name: 'reflow_process_candidate_label',
+      schema: processCandidateLabelSchema,
+    }),
+    prompt,
+    providerOptions: {
+      gateway: {
+        tags: [
+          'reflow',
+          'process-candidate-label',
+          `prompt-v${processMiningPromptVersion}`,
+        ],
+      },
+    },
+  });
+  return result.output;
+}
+
+export async function labelProcessCandidate(
+  configuration: TaskInferenceGatewayConfiguration,
+  request: ProcessCandidateLabelRequest,
+  generate: StructuredTaskGenerator = labelProcessCandidateThroughGateway,
+): Promise<ProcessCandidateLabel> {
+  if (!configuration.apiKey) throw new Error('ai_gateway_key_required');
+  if (!configuration.model) throw new Error('process_mining_model_required');
+  if (request.representativeTasks.length === 0)
+    throw new Error('process_candidate_evidence_required');
+  const generated = await generate(
+    configuration,
+    promptForProcessCandidateLabel(request),
+  );
+  const parsed = processCandidateLabelSchema.safeParse(generated);
+  if (!parsed.success) throw new Error('invalid_process_candidate_label');
   return parsed.data;
 }

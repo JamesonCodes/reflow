@@ -340,6 +340,28 @@ evidence.
 
 `feat: add as-is process mining`
 
+### Phase 5A hardening checkpoint
+
+**Status:** Complete
+
+The hardening pass replaces model-defined process boundaries with deterministic
+contiguous range discovery. It finds the longest recurring evidence envelope
+within each observation and hard activity segment, tolerates different task
+split/merge boundaries, and groups behavioral variants independently of inferred
+task wording. Every effective task snapshot is persisted exactly once as part of
+a complete match, partial fragment, non-recurring range, or uncertain range.
+
+Only complete matches count toward frequency and duration metrics. Partial
+fragments remain visible as supporting evidence without inflating occurrence
+counts. Vercel AI Gateway supplies bounded candidate labels and rationale after
+membership is fixed. The analyst view renders the canonical stage sequence,
+ordered system route, complete evidence, partial evidence, and reasons isolated
+activity was not promoted.
+
+### Delivery
+
+`fix: harden as-is process discovery`
+
 ## Phase 6 — Analysis and To-Be redesign
 
 **Status:** Planned

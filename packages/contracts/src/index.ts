@@ -38,6 +38,7 @@ export {
 export {
   miningTaskSchema,
   processBoundaryOutputSchema,
+  processCandidateLabelSchema,
   processCandidateCorrectionInputSchema,
   processCandidateCorrectionTypeSchema,
   processCandidateSchema,
@@ -46,11 +47,17 @@ export {
   processMetricsSchema,
   processMiningAlgorithmVersion,
   processMiningPromptVersion,
+  processInstanceDispositionSchema,
+  processMatchDiagnosticsSchema,
+  processVariantSchema,
   type MiningTask,
   type ProcessBoundaryOutput,
   type ProcessCandidate,
+  type ProcessCandidateLabel,
   type ProcessCandidateCorrectionInput,
   type ProcessFinding,
+  type ProcessInstanceDisposition,
+  type ProcessMatchDiagnostics,
 } from './process-mining';
 export {
   approvedHostnameSchema,

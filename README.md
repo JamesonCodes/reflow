@@ -257,14 +257,16 @@ evidence remain unchanged.
 After at least two comparable process instances have been inferred, open
 **As-Is process mining**, select a department, and queue a mining run. Reflow
 uses the latest effective analyst-corrected tasks, deterministic evidence
-signatures, ordered sequence similarity, and structured Vercel AI Gateway
-boundaries to produce recurring candidates, exact variants, timing metrics,
-transition graphs, and evidence-backed findings.
+signatures, contiguous range discovery, and ordered behavioral similarity to
+produce recurring candidates, variants, timing metrics, transition graphs, and
+evidence-backed findings. Vercel AI Gateway labels validated candidates but
+cannot change their deterministic boundaries or supporting observations.
 
-Single observations and unmatched task sequences remain visible as evidence but
-are not promoted to recurring processes. Analysts can rename, merge, split,
-confirm, or reject candidates through immutable correction overlays. Phase 6
-will consume confirmed effective candidates only.
+The dashboard shows a canonical observed stage sequence, complete occurrences,
+partial supporting observations, and isolated activity that was not promoted.
+Task split/merge differences alone do not create false variants. Analysts can
+rename, merge, split, confirm, or reject candidates through immutable correction
+overlays. Phase 6 will consume confirmed effective candidates only.
 
 ## Development commands
 

@@ -633,6 +633,14 @@ select:hover {
   gap: 0.25rem;
 }
 
+.selection-checkbox {
+  accent-color: #2f6f4e;
+  flex: 0 0 auto;
+  min-height: auto;
+  padding: 0;
+  width: 1rem;
+}
+
 .process-title small,
 .metric-strip,
 .process-candidate > p,
@@ -654,6 +662,82 @@ select:hover {
 
 .instance-list {
   margin: 0.75rem 0;
+}
+
+.instance-list label {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.evidence-rationale {
+  border-left: 3px solid #a9bdaa;
+  padding-left: 0.75rem;
+}
+
+.canonical-process {
+  background: #ffffff;
+  border: 1px solid #e1e7e0;
+  border-radius: 0.7rem;
+  margin: 1rem 0;
+  padding: 0.9rem;
+}
+
+.canonical-process h3 {
+  font-size: 0.82rem;
+  margin: 0 0 0.75rem;
+}
+
+.canonical-process ol {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.canonical-process li {
+  align-items: center;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: 1.75rem 1fr;
+}
+
+.canonical-process li > span {
+  align-items: center;
+  background: #eaf0e9;
+  border-radius: 999px;
+  display: flex;
+  font-size: 0.72rem;
+  height: 1.75rem;
+  justify-content: center;
+}
+
+.canonical-process li div,
+.canonical-process li small {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.canonical-process li small,
+.partial-evidence,
+.unpromoted-processes {
+  color: #6d7971;
+  font-size: 0.76rem;
+}
+
+.partial-evidence {
+  background: #f1f4ef;
+  border-radius: 0.6rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+}
+
+.unpromoted-processes {
+  border: 1px dashed #cfd8cf;
+  border-radius: 0.7rem;
+  margin-top: 1rem;
+  padding: 0.8rem;
 }
 
 .correction-panel {
